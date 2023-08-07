@@ -1,0 +1,179 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Dashboard {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+
+    <!-- Header -->
+    <div class="header bg-primary pb-6">
+      <div class="container-fluid">
+        <div class="header-body">
+          <div class="row align-items-center py-4">
+            <div class="col-lg-6 col-7">
+              <h6 class="h2 text-white d-inline-block mb-0">ERI</h6>
+            </div>
+            <div class="col-lg-6 col-5 text-right">
+              <a href="scrap" class="btn btn-sm btn-neutral">Scrap</a>
+            </div>
+          </div>
+          <!-- Card stats -->
+          <div class="row">
+            <div class="col-xl-4 col-md-6">
+              <div class="card card-stats">
+                <!-- Card body -->
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                      <h5 class="card-title text-uppercase text-muted mb-0">Total Records</h5>
+                      <span class="h2 font-weight-bold mb-0">10</span>
+                    </div>
+                    <div class="col-auto">
+                      <div class="icon icon-shape bg-gradient-red text-white rounded-circle shadow">
+                        <i class="ni ni-active-40"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-4 col-md-6">
+              <div class="card card-stats">
+                <!-- Card body -->
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                      <h5 class="card-title text-uppercase text-muted mb-0">start at</h5>
+                      <span class="h2 font-weight-bold mb-0">12:00 am</span>
+                    </div>
+                    <div class="col-auto">
+                      <div class="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
+                        <i class="ni ni-chart-pie-35"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-xl-4 col-md-6">
+              <div class="card card-stats">
+                <!-- Card body -->
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col">
+                      <h5 class="card-title text-uppercase text-muted mb-0">Status</h5>
+                      <span class="h2 font-weight-bold mb-0">In progress</span>
+                    </div>
+                    <div class="col-auto">
+                      <div class="icon icon-shape bg-gradient-green text-white rounded-circle shadow">
+                        <i class="ni ni-money-coins"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page content -->
+    <div class="container-fluid mt--6">
+      <div class="row">
+        <div class="col-xl-12">
+          <div class="card">
+            <div class="card-header border-0">
+              <div class="row align-items-center">
+                <div class="col">
+                  <h3 class="mb-0">Results</h3>
+                </div>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <!-- Projects table -->
+              <table class="table align-items-center table-flush">
+                <thead class="thead-light">
+                  <tr>
+                    <th scope="col">creadetor name</th>
+                    <th scope="col">company suid</th>
+                    <th scope="col">officers comany</th>
+                    <th scope="col">business address</th>
+                    <th scope="col">business city</th>
+                    <th scope="col">business state</th>
+                    <th scope="col">business zip</th>
+                    <th scope="col">contact address</th>
+                    <th scope="col">contact city</th>
+                    <th scope="col">contact state</th>
+                    <th scope="col">contact zip</th>
+                    <th scope="col">tel</th>
+                    <th scope="col">email</th>
+                    <th scope="col">price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for record in records%}
+                    <tr>
+                      <th scope="row">
+                        {{record.creadetor_name}}
+                      </th>
+                      <td>
+                        {{record.company_suid}}
+                      </td>
+                      <td>
+                        {{record.officers_comany}}
+                      </td>
+                      <td>
+                        {{record.business_address}}
+                      </td>
+                      <td>
+                        {{record.business_city}}
+                      </td>
+                      <td>
+                        {{record.business_state}}
+                      </td>
+                      <td>
+                        {{record.business_zip}}
+                      </td>
+                      <td>
+                        {{record.contact_address}}
+                      </td>
+                      <td>
+                        {{record.contact_city}}
+                      </td>
+                      <td>
+                        {{record.contact_state}}
+                      </td>
+                      <td>
+                        {{record.contact_zip}}
+                      </td>
+                      <td>
+                        {{record.tel}}
+                      </td>
+                      <td>
+                        {{record.email}}
+                      </td>
+                      <td>
+                        {{record.price}}
+                      </td>
+                    </tr>
+                  {% endfor%}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE --> 
+{% block javascripts %}
+
+  <script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>
+  <script src="/static/assets/vendor/chart.js/dist/Chart.extension.js"></script>
+
+{% endblock javascripts %}

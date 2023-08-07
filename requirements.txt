@@ -1,0 +1,11 @@
+django
+gunicorn
+python-dotenv
+whitenoise
+selenium
+python_anticaptcha
+pdf2image
+undetected_chromedriver
+
+# psycopg2-binary
+# mysqlclient
