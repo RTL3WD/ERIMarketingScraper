@@ -97,6 +97,8 @@
               <table class="table align-items-center table-flush">
                 <thead class="thead-light">
                   <tr>
+                    <th scope="col"></th>
+                    <th scope="col">Folder</th>
                     <th scope="col">creadetor name</th>
                     <th scope="col">company suid</th>
                     <th scope="col">officers comany</th>
@@ -114,11 +116,17 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {% for record in records%}
+                  {% for record in records %}
                     <tr>
-                      <th scope="row">
+                      <td scope="row">
+                        {{forloop.counter}}
+                      </td>
+                      <td scope="row">
+                        {{record.folder}}
+                      </td>
+                      <td scope="row">
                         {{record.creadetor_name}}
-                      </th>
+                      </td>
                       <td>
                         {{record.company_suid}}
                       </td>

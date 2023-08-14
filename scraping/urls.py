@@ -11,6 +11,7 @@ urlpatterns = [
     # The home page
     path('', views.index, name='home'),
     path('scrape', views.scrape, name='scrape'),
+    path('getRecordsFromPhoneBurner', views.getRecordsFromPhoneBurner, name='getRecordsFromPhoneBurner'),
 
     # Matches any html file
     re_path(r'^.*\.*', views.pages, name='pages'),
