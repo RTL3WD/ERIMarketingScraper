@@ -24,7 +24,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 import cv2
 import io
 import numpy as np  # Import NumPy
-import os
 import psutil
 
 api_key = 'e77cab79ca105a72b529f7b0026b7ee1'
@@ -129,9 +128,9 @@ def scrape(request):
         optionsUC.add_argument('--window-size=360,640')
         optionsUC.add_argument('--no-sandbox')
         try:
-            driver =  webdriver.Chrome(options=optionsUC)
+            # driver =  webdriver.Chrome(options=optionsUC)
             try:
-                # return False
+                return False
                 driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
                 driver.get('https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange')
                 sleep(5)
@@ -148,8 +147,8 @@ def scrape(request):
                 driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                 driver.execute_script("document.getElementById('captcha_form').submit();")
 
-                WebDriverWait(driver, 600).until(EC.presence_of_element_located((By.XPATH,'//*[@id="selCountyCourt"]/option[text()="Albany County Supreme Court"]')))
-                driver.find_element(By.XPATH,'//*[@id="selCountyCourt"]/option[text()="Albany County Supreme Court"]').click()
+                WebDriverWait(driver, 600).until(EC.presence_of_element_located((By.XPATH,'//*[@id="selCountyCourt"]/option[text()="Kings County Supreme Court"]')))
+                driver.find_element(By.XPATH,'//*[@id="selCountyCourt"]/option[text()="Kings County Supreme Court"]').click()
                 driver.find_element(By.CSS_SELECTOR,'#txtFilingDate').send_keys(Keys.BACKSPACE * 50)
                 driver.find_element(By.CSS_SELECTOR,'#txtFilingDate').send_keys(datetime.utcnow().strftime('%m/%d/%Y'))
                 driver.find_element(By.CSS_SELECTOR,'input[type*="submit"]').click()
@@ -194,7 +193,7 @@ def scrape(request):
                 print('-'*50)
                 print(e)
             finally:
-                driver.quit()
+                # driver.quit()
                 PROCNAME = "chromedriver" # or chromedriver or IEDriverServer
                 for proc in psutil.process_iter():
                     # check whether the process name matches
@@ -491,7 +490,35 @@ def scrape(request):
                             
                     records.append(record)
                             
-                    
+
+                for record in records:
+                    at = airtable.Airtable('appho2OWyOBvn6PPU', 'patwsQ3w8O4VGC05S.01759369d41db17822bcf0074f5daf046cc68ef136677dd68a15550f0e843bef')
+                    at.create('Scrape Leads', {
+                        'First Name': '',
+                        'Last Name': '',
+                        'BUSINESS NAME': '',
+                        'phone': 'test',
+                        'email': record['email'],
+                        'Lead Source': '',
+                        'REP': '',
+                        'Status': '',
+                        'DEBT AMOUNT': '',
+                        'NOTES': '',
+                        'BALANCE OWED': '',
+                        'CLIENT NAME': '',
+                        'CREDITOR NAME': record['creadetor_name'],
+                        'CLIENT\'S STATE': record['contact_state'],
+                        'COUNTY': '',
+                        'COMPANY NAME': '',
+                        'COMPANY NUMBER': '',
+                        'DONT CALL': '',
+                        'Docs Missing': '',
+                        'Referall Rep': record["price"],
+                        'Requested Funding': 0,
+                        'BALANCE': record["price"],
+                        'From': ''
+                    })
+
                 context['records'] = records
                 html_template = loader.get_template('home/index.html')
                 return HttpResponse(html_template.render(context, request))
@@ -505,6 +532,4 @@ def scrape(request):
     
     
 def getRecordsFromPhoneBurner(request):
-    at = airtable.Airtable('appKpiXBqqK7QvT6u', 'patwsQ3w8O4VGC05S.01759369d41db17822bcf0074f5daf046cc68ef136677dd68a15550f0e843bef')
-    at.create('Leads', {'First Name': 'test'})
     return HttpResponse('ok')
