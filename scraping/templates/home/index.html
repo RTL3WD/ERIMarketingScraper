@@ -28,7 +28,7 @@
                   <div class="row">
                     <div class="col">
                       <h5 class="card-title text-uppercase text-muted mb-0">Total Records</h5>
-                      <span class="h2 font-weight-bold mb-0">10</span>
+                      <span class="h2 font-weight-bold mb-0">{{ records|length }}</span>
                     </div>
                     <div class="col-auto">
                       <div class="icon icon-shape bg-gradient-red text-white rounded-circle shadow">
@@ -99,6 +99,7 @@
                   <tr>
                     <th scope="col"></th>
                     <th scope="col">Folder</th>
+                    <th scope="col">date</th>
                     <th scope="col">email</th>
                     <th scope="col">tel</th>
                     <th scope="col">first name</th>
@@ -107,8 +108,8 @@
                     <th scope="col">company suid</th>
                     <th scope="col">officers comany</th>
                     <th scope="col">business name</th>
+                    <th scope="col">county</th>
                     <th scope="col">business address</th>
-                    <th scope="col">contact address</th>
                     <th scope="col">price</th>
                   </tr>
                 </thead>
@@ -120,6 +121,9 @@
                       </td>
                       <td scope="row">
                         {{record.folder}}
+                      </td>
+                      <td>
+                        {{record.date}}
                       </td>
                       <td>
                         {{record.email}}
@@ -146,10 +150,10 @@
                         {{record.business_name}}
                       </td>
                       <td>
-                        {{record.business_address}}
+                        {{record.county}}
                       </td>
                       <td>
-                        {{record.contact_address}}
+                        {{record.business_address}}
                       </td>
                       <td>
                         {{record.price}}

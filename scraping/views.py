@@ -26,6 +26,8 @@ import io
 import numpy as np  # Import NumPy
 import psutil
 from imutils import contours
+from uszipcode import SearchEngine, SimpleZipcode, ComprehensiveZipcode
+import fitz
 
 api_key = 'e77cab79ca105a72b529f7b0026b7ee1'
 url = 'https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange'
@@ -51,7 +53,30 @@ def pages(request):
     html_template = loader.get_template('home/index.html')
     return HttpResponse(html_template.render(context, request))
 
-
+def get_county_from_address(zipcode=None, city=None, state=None):
+    search = SearchEngine()
+    result = None
+    print('='*100)
+    if state:
+        if len(re.findall('\d',state))>0:
+            state = state.replace(re.findall('\d',state)[0],'').strip()
+        print(state)
+        result = search.by_state(state)
+    elif city:
+        print(city)
+        result = search.by_city(city)
+    elif zipcode:
+        print(zipcode)
+        result = search.by_zipcode(zipcode)
+    print('='*100)
+    
+    if result:
+        county = result[0].county
+        return county
+    else:
+        return None
+    
+    
 def download_file(download_url):
     try:
         file_name = download_url['name'] + '.pdf'
@@ -134,10 +159,12 @@ def scrape(request):
             current_date = datetime.utcnow()
             one_day = timedelta(days=1)
             previous_date = (current_date - one_day).strftime('%m/%d/%Y')
+            today_date = current_date.strftime('%m/%d/%Y')
             driver =  webdriver.Chrome(options=optionsUC)
             try:
                 # hrefss = ['https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=6EX0TNNc0QnNa/CDGn0xCQ==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1','https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=sQFus2Np8nx1hj/YMI1IhA==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=5','https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=xkrTPvUbcKSHTkheuDWkFA==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1','https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=b2tHRQg10udHQWOYfudvtQ==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1','https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=MzOiX75SO4ZjdZss/uPRUw==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=3','https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=HPCQuFE9n9yQ5m7VXwzGSw==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1','https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=FTuCmnOXNu4nPJ7rvoAiig==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1', 'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=qiDJalt0vbDTfXP7pdZZLw==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1', 'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=FktbgjuFTBVcsejt0E_PLUS_pnw==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1', 'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=RVPU28ulkrScAxnUoEopqw==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1', 'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=_PLUS_SyXPcSo0/R5Z4eBk4SFEw==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1']
-                # for href in [hrefss[0],hrefss[1],hrefss[2],hrefss[3]]:
+                # hrefss = ['https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=6EX0TNNc0QnNa/CDGn0xCQ==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1', 'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=b2tHRQg10udHQWOYfudvtQ==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1' , 'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=qiDJalt0vbDTfXP7pdZZLw==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1']
+                # for href in hrefss:
                 #     elemntDriver = Chrome()
                 #     elemntDriver.get(href)
                 #     docs = elemntDriver.find_elements(By.CSS_SELECTOR, 'table.NewSearchResults > tbody > tr > td:nth-child(2) > a')
@@ -207,7 +234,7 @@ def scrape(request):
                         driver.find_element(By.CSS_SELECTOR,'caption input[type*="submit"]').click()
                         sleep(6)
                         elements = driver.find_elements(By.CSS_SELECTOR, '#form > table.NewSearchResults > tbody > tr > td:nth-child(1) > a')
-                        for i,e in enumerate([elements[3],elements[4],elements[5],elements[6],elements[7]]):
+                        for i,e in enumerate(elements):
                             href = e.get_attribute('href')
                             elemntDriver = Chrome()
                             elemntDriver.get(href)
@@ -268,42 +295,108 @@ def scrape(request):
                     files = [file for file in os.listdir(folder_path + '/' + folder) if file.endswith(".pdf")]
                     record = {}
                     record['folder'] = folder
-                    if folder != 'b2tHRQg10udHQWOYfudvtQ==':
+                    if folder != '':
                         for pdf_file in files:
                             try:
-                                tel = ''
-                                email = ''
-                                business_name = ''
-                                business_address = ''
-                                business_city = ''
-                                business_state = ''
-                                business_zip = ''
-                                contact_address = ''
-                                contact_city = ''
-                                contact_state = ''
-                                contact_zip = ''
-                                first_name = ''
-                                last_name = ''
                                 pdf_path = os.path.join(folder_path + '/' + folder, pdf_file)
-                                # Convert PDF to images
-                                images = convert_from_path(pdf_path)
-                                
                                 if 'summons' in pdf_file.lower() or 'petition' in pdf_file.lower():
                                     try:
-                                        for i, image in enumerate([images[0],images[1],images[2]]):
+                                        images = convert_from_path(pdf_path, first_page=0, last_page=2)
+                                        for i, image in enumerate(images):
                                             if i == 0:
+                                                custom_config = r'--oem 3 --psm 6'
                                                 #(left, upper, right, lower)
                                                 cropped_image = image.crop((1, 100, 1000, 1000))
                                                 text = pytesseract.image_to_string(cropped_image, lang='eng')
                                                 creadetor_name = ''
                                                 company_suid = ''
                                                 officers_comany = ''
-                                                creadetor_name_elments = [e for e in re.findall('wenn eee x\\n.*?,||wenn eee x\\n\\n.*?,|ee ee ee XxX\\n.*?\\n' ,text) if len(e) > 0]
-                                                if(len(creadetor_name_elments)>0):
-                                                    creadetor_name = creadetor_name_elments[0].replace('\\n','').replace('wenn eee x', '').replace('ee ee ee XxX', '')
-                                                    if(',' in creadetor_name[len(creadetor_name)-1]):
-                                                        creadetor_name = creadetor_name.replace(',','')
-                                                else:
+                                                #(left, upper, right, lower)
+                                                cropped_image = image.crop((1, 150, 1500, 1000))
+                                                img_bytes = io.BytesIO()
+                                                cropped_image.save(img_bytes, format='JPEG')  # Save as JPEG (or other supported format)
+                                                img_bytes = img_bytes.getvalue()
+                                                
+                                                # # Decode the image bytes using OpenCV
+                                                img = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_GRAYSCALE)
+                                                kernel_size = 5
+                                                blur_gray = cv2.GaussianBlur(img,(kernel_size, kernel_size),0)
+                                                low_threshold = 50
+                                                high_threshold = 150
+                                                edges = cv2.Canny(blur_gray, low_threshold, high_threshold)
+                                                rho = 1  # distance resolution in pixels of the Hough grid
+                                                theta = np.pi / 180  # angular resolution in radians of the Hough grid
+                                                threshold = 15  # minimum number of votes (intersections in Hough grid cell)
+                                                min_line_length = 250  # minimum number of pixels making up a line
+                                                max_line_gap = 5  # maximum gap in pixels between connectable line segments
+                                                line_image = np.copy(img) * 0  # creating a blank to draw lines on
+
+                                                # Run Hough on edge detected image
+                                                # Output "lines" is an array containing endpoints of detected line segments
+                                                lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
+                                                                    min_line_length, max_line_gap)
+                                                image_height, image_width = img.shape[:2]
+                                                upper_x1 = 0
+                                                upper_y1 = 0
+                                                for i,line in enumerate(lines):
+                                                    x1, y1, x2, y2 = line[0]
+                                                    slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
+                                                    angle = np.arctan(slope) * 180 / np.pi
+                                                    average_y = (y1 + y2) / 2
+                                                    try:
+                                                        if abs(angle) < 10:
+                                                            if average_y < image_height / 2:
+                                                                for x1,y1,x2,y2 in line:
+                                                                    upper_x1 = x1
+                                                                    upper_y1 = y1 +70
+                                                    except Exception as e:
+                                                        pass
+                                                                    
+                                                
+                                                for i,line in enumerate(lines):
+                                                    x1, y1, x2, y2 = line[0]
+                                                    slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
+                                                    angle = np.arctan(slope) * 180 / np.pi
+                                                    average_y = (y1 + y2) / 2
+                                                    try:
+                                                        if abs(angle) < 10:
+                                                            if average_y < image_height / 2:
+                                                                for x1,y1,x2,y2 in line:
+                                                                    if creadetor_name == '':
+                                                                        text_region = img[y1:y2 + 400, x1:x2]
+                                                                        box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                        print(re.findall('[\s\S]*?Plaintiff' ,box_test))
+                                                                        if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0):
+                                                                            creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
+                                                                        else:
+                                                                            text_region = img[y1:y2 + 70, x1:x2]
+                                                                            creadetor_name = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                        cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+                                                                        cv2.rectangle(img, (x1, y1), (x2, y2+400), (67, 255, 100), 2)
+                                                            else:
+                                                                for x1,y1,x2,y2 in line:
+                                                                    text_region = img[y1 - 500:y2 , x1:x2]
+                                                                    box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                    if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test))>0):
+                                                                        company_suid = re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test)[0].replace('Defendants','').strip()
+                                                                        if(len(re.findall('-against-\\n|-against-\\n\\n' ,company_suid))>0):
+                                                                            company_suid = company_suid.replace(re.findall('-against-\\n|-against-\\n\\n' ,company_suid)[0], '')
+
+                                                                    if(len(re.findall('Defendants\\n.*?,|Defendants\\n\\n.*?,|Defendants\\n\\n.*?;|Defendants[\s\S]*' ,box_test))>0):
+                                                                        officers_comany = re.findall('Defendants\\n.*?,|Defendants\\n\\n.*?,|Defendants\\n\\n.*?;|Defendants[\s\S]*' ,box_test)[0].replace('Defendants.', '').replace('Defendants', '').strip()
+                                                                        if(len(re.findall('Defendants\\n|Defendants\\n\\n' ,officers_comany))>0):
+                                                                            officers_comany = officers_comany.replace(re.findall('Defendants\\n|Defendants\\n\\n' ,officers_comany)[0], '')
+                                                                    
+                                                                    cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+                                                                    cv2.rectangle(img, (upper_x1 if upper_x1 else x1, upper_y1 if upper_y1 else y1 - 500), (x2, y2), (67, 255, 100), 2)
+                                                        else:
+                                                            pass
+                                                    except Exception as e:
+                                                        print('creadetor_name2 error'+str(e))
+                                                cv2.imwrite(folder_path+ "/" + folder + '/' + "text_under_line.jpg", img)
+                                                
+                                                
+                                                if( len(creadetor_name) == 0 ):
                                                     img = convertImg(image)
                                                     # threshold the grayscale image
                                                     thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
@@ -339,22 +432,25 @@ def scrape(request):
                                                             # cv2.imshow("GRAY", text_region)
                                                             # cv2.waitKey(0)
                                                             if(extracted_text == 'ne,' or extracted_text == 'nD,' or extracted_text == 'er,' or '— - X' in extracted_text or 'a , INDEX' in extracted_text or '— — XX' in extracted_text or 'asescs K INDEX N' in extracted_text or 'XxX' in extracted_text or '+--+' in extracted_text or '=== X' in extracted_text or 'eenX' in extracted_text):
-                                                                if x_index == 1:
-                                                                    # text_region = thresh[y:y + h - 90, x:x + w]
-                                                                    # officers_comany = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h-90), (0, 0, 255), 2)
-                                                                    x_index = x_index +1
-                                                                else:
-                                                                    text_region = thresh[y+15:y + h + 70, x:x + w]
-                                                                    creadetor_name = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                                    creadetor_name = creadetor_name.replace('werewerewenecncecncecnncncrener ener eserccccccccwooe XK INDEX N','').replace('Fa nnn nnn nnn nnn INDEX N','').replace('Fa nnn nnn nnn nnn INDEX N','')
-                                                                    cv2.rectangle(result, (x, y+15), (x+w, y+h+70), (67, 255, 100), 2)
+                                                                try:
+                                                                    if x_index == 1:
+                                                                        # text_region = thresh[y:y + h - 90, x:x + w]
+                                                                        # officers_comany = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                        cv2.rectangle(result, (x, y), (x+w, y+h-90), (0, 0, 255), 2)
+                                                                        x_index = x_index +1
+                                                                    else:
+                                                                        text_region = thresh[y+15:y + h + 70, x:x + w]
+                                                                        creadetor_name = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                        creadetor_name = creadetor_name.replace('werewerewenecncecncecnncncrener ener eserccccccccwooe XK INDEX N','').replace('Fa nnn nnn nnn nnn INDEX N','').replace('Fa nnn nnn nnn nnn INDEX N','')
+                                                                        cv2.rectangle(result, (x, y+15), (x+w, y+h+70), (67, 255, 100), 2)
+                                                                except Exception as e:
+                                                                    print('creadetor_name error'+str(e))
                                                             else:
                                                                 pass
                                                                 # cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
 
                                                     # write result to disk
-                                                    cv2.imwrite("text_above_lines_lines.jpg", result)
+                                                    cv2.imwrite(folder_path+ "/" + folder + '/'  + "text_above_lines_lines.jpg", result)
 
                                                     #cv2.imshow("GRAY", gray)
                                                     # cv2.imshow("RESULT", result)
@@ -362,51 +458,12 @@ def scrape(request):
                                                     # cv2.destroyAllWindows()
                                                     
 
-                                                
-                                                if( len(creadetor_name) == 0 ):
-                                                    #(left, upper, right, lower)
-                                                    cropped_image = image.crop((1, 150, 1500, 1000))
-                                                    img_bytes = io.BytesIO()
-                                                    cropped_image.save(img_bytes, format='JPEG')  # Save as JPEG (or other supported format)
-                                                    img_bytes = img_bytes.getvalue()
-                                                    
-                                                    # # Decode the image bytes using OpenCV
-                                                    img = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_GRAYSCALE)
-                                                    kernel_size = 5
-                                                    blur_gray = cv2.GaussianBlur(img,(kernel_size, kernel_size),0)
-                                                    low_threshold = 50
-                                                    high_threshold = 150
-                                                    edges = cv2.Canny(blur_gray, low_threshold, high_threshold)
-                                                    rho = 1  # distance resolution in pixels of the Hough grid
-                                                    theta = np.pi / 180  # angular resolution in radians of the Hough grid
-                                                    threshold = 15  # minimum number of votes (intersections in Hough grid cell)
-                                                    min_line_length = 250  # minimum number of pixels making up a line
-                                                    max_line_gap = 5  # maximum gap in pixels between connectable line segments
-                                                    line_image = np.copy(img) * 0  # creating a blank to draw lines on
-
-                                                    # Run Hough on edge detected image
-                                                    # Output "lines" is an array containing endpoints of detected line segments
-                                                    lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
-                                                                        min_line_length, max_line_gap)
-
-                                                    for i,line in enumerate(lines):
-                                                        if i == 0:
-                                                            for x1,y1,x2,y2 in line:
-                                                                text_region = img[y1:y2 + 70, x1:x2]
-                                                                creadetor_name = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                                cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
-                                                                cv2.rectangle(img, (x1, y1), (x2, y2+70), (67, 255, 100), 2)
-                                                        else:
-                                                            cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
-                                                            cv2.rectangle(img, (x1, y1), (x2, y2+70), (67, 255, 100), 2)
-                                                    cv2.imwrite("text_under_line.jpg", img)
-
-                                                if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text))>0):
+                                                if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text))>0) and company_suid == '':
                                                     company_suid = re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text)[0]
                                                     if(len(re.findall('-against-\\n|-against-\\n\\n' ,company_suid))>0):
                                                         company_suid = company_suid.replace(re.findall('-against-\\n|-against-\\n\\n' ,company_suid)[0], '')
 
-                                                if(len(re.findall('Defendants\\n.*?,|Defendants\\n\\n.*?,|Defendants\\n\\n.*?;' ,text))>0):
+                                                if(len(re.findall('Defendants\\n.*?,|Defendants\\n\\n.*?,|Defendants\\n\\n.*?;' ,text))>0) and officers_comany == '':
                                                     officers_comany = re.findall('Defendants\\n.*?,|Defendants\\n\\n.*?,|Defendants\\n\\n.*?;' ,text)[0]
                                                     if(len(re.findall('Defendants\\n|Defendants\\n\\n' ,officers_comany))>0):
                                                         officers_comany = officers_comany.replace(re.findall('Defendants\\n|Defendants\\n\\n' ,officers_comany)[0], '')
@@ -421,281 +478,28 @@ def scrape(request):
                                             
                                             
                                 if 'exhibit' in pdf_file.lower() or 'statement of authorization' in pdf_file.lower():
-                                    try:
-                                        for i, image in enumerate([images[0],images[1],images[2]]):
-                                            if i == 0 or i == 1:
-                                                # Perform OCR on each image
-                                                text = pytesseract.image_to_string(image, lang='eng')
-                                                try:
-                                                    img = convertImg(image)
-                                                    
-                                                    # threshold the grayscale image
-                                                    thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
-
-                                                    # use morphology erode to blur horizontally
-                                                    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (151, 3))
-                                                    morph = cv2.morphologyEx(thresh, cv2.MORPH_DILATE, kernel)
-
-                                                    # find contours
-                                                    cntrs = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                                                    cntrs = cntrs[0] if len(cntrs) == 2 else cntrs[1]
-
-                                                    # find the topmost box
-                                                    ythresh = 1000000
-                                                    for c in cntrs:
-                                                        box = cv2.boundingRect(c)
-                                                        x,y,w,h = box
-                                                        if y < ythresh:
-                                                            topbox = box
-                                                            ythresh = y
-
-                                                    # Draw contours excluding the topmost box
-                                                    result = img.copy()
-                                                    x_index = 1
-                                                    for c in cntrs:
-                                                        box = cv2.boundingRect(c)
-                                                        if box != topbox:
-                                                            x,y,w,h = box
-                                                            text_region = thresh[y:y + h, x:x + w]
-                                                            # enhanced_region = cv2.bitwise_not(text_region)
-                                                            custom_config = r'--oem 3 --psm 6'
-                                                            extracted_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                            # cv2.imshow("GRAY", text_region)
-                                                            # cv2.waitKey(0)
-                                                            if len(re.findall('[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',extracted_text)) > 0 and tel == '':
-                                                                try:
-                                                                    tel = re.findall('[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',extracted_text)[0]
-                                                                    record['tel'] = tel
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                                                                except Exception as e:
-                                                                    print('phone error'+str(e))
-                                                            
-                                                            if len(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',extracted_text)) > 0 and email == '':
-                                                                try:
-                                                                    email = re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',extracted_text)[0]
-                                                                    record['email'] = email
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                                                                except Exception as e:
-                                                                    print('email error'+str(e))
-                                                            
-                                                            if len(re.findall('Full Name:.*|Full Name;.*',extracted_text))> 0 and first_name == '' and last_name == '':
-                                                                try:
-                                                                    name = re.findall('Full Name:.*|Full Name;.*',extracted_text)[0].strip().replace('Full Name:','').replace('Full Name;','')
-                                                                    first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
-                                                                    last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
-                                                                    record['first_name'] = first_name
-                                                                    record['last_name'] = last_name
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h+140), (0, 0, 255), 2)
-                                                                except Exception as e:
-                                                                    print('full name error'+str(e))
-                                                                    
-                                                            if len(re.findall('First Name:.*',extracted_text)) > 0 and first_name == '':
-                                                                try:
-                                                                    first_name = re.findall('First Name:.*',extracted_text)[0].replace('First Name:','')
-                                                                    record['first_name'] = first_name
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                                                                except Exception as e:
-                                                                    print('first name error'+str(e))
-                                                            
-                                                            if len(re.findall('Last Name:.*',extracted_text)) > 0 and last_name == '':
-                                                                try:
-                                                                    last_name = re.findall('Last Name:.*',extracted_text)[0].replace('Last Name:', '')
-                                                                    record['last_name'] = last_name
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                                                                except Exception as e:
-                                                                    print('last name error'+str(e))
-                                                                
-                                                                
-                                                            if 'OWNER/GUARANTOR #1' in extracted_text and first_name == '' and last_name == '':
-                                                                try:
-                                                                    text_region = thresh[y+15:y + h + 140, x:x + w]
-                                                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h+140), (0, 0, 255), 2)
-                                                                    if len(re.findall('Name:.*|Name;.*',croped_text))> 0:
-                                                                        name = re.findall('Name:.*|Name;.*',croped_text)[0].replace('Name:','').replace('Name;','').replace('By:','').strip()
-                                                                        first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
-                                                                        last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
-                                                                        record['first_name'] = first_name
-                                                                        record['last_name'] = last_name
-                                                                except Exception as e:
-                                                                    print('OWNER/GUARANTOR #1 error'+str(e))
-                                                                    
-                                                            if 'OWNER/GUARANTOR (#1)' in extracted_text and first_name == '' and last_name == '':
-                                                                try:
-                                                                    text_region = thresh[y+15:y + h + 140, x:x + w + 200]
-                                                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                                    cv2.rectangle(result, (x, y), (x+w+ 200, y+h+140), (0, 0, 255), 2)
-                                                                    if len(re.findall('Name:.*|Name;.*|By:.*',croped_text))> 0:
-                                                                        name = re.findall('Name:.*|Name;.*|By:.*',croped_text)[0].replace('Name:','').replace('Name;','').replace('By:','').strip()
-                                                                        first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
-                                                                        last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
-                                                                        record['first_name'] = first_name
-                                                                        record['last_name'] = last_name
-                                                                        print('='*100)
-                                                                        print(croped_text)
-                                                                        print(name)
-                                                                        print('='*100)
-                                                                except Exception as e:
-                                                                    print('OWNER/GUARANTOR (#1) error'+str(e))
-                                                                
-                                                                    
-                                                            if len(re.findall('Legal Name:.*',extracted_text)) > 0 and business_name == '':
-                                                                try:
-                                                                    business_name = re.findall('Legal Name:.*',extracted_text)[0].replace('Legal Name:','')
-                                                                    if(len(re.findall('[a-zA-Z]+?:',business_name))>0):
-                                                                        business_name = business_name.replace(re.findall('[a-zA-Z]+?:',business_name)[0],'')
-                                                                    record['business_name'] = business_name
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                                                                except Exception as e:
-                                                                    print('legal name error'+str(e))
-                                                                
-                                                                
-                                                            if len(re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*',extracted_text)) > 0 and business_address == '':
-                                                                try:
-                                                                    business_address = re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*',extracted_text)[0].replace('Business Location Street Address:','').replace('Business Address:','').replace('Business street address:','').replace('city','').replace('Physical Address:','')
-                                                                    if(len(re.findall('[a-zA-Z]+?:',business_address))>0):
-                                                                        business_address = business_address.replace(re.findall('[a-zA-Z]+?:',business_address)[0],'')
-                                                                    record['business_address'] = business_address
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                                                                except Exception as e:
-                                                                    print('business address error'+str(e))
-                                                                
-                                                            if len(re.findall('City:.*?:|Business city:.*?:|Business Location Street Address:.*?Stata',extracted_text)) > 0 and business_city == '':
-                                                                try:
-                                                                    business_city = re.findall('City:.*?:|Business city:.*?:|Business Location Street Address:.*?Stata',extracted_text)[0].replace('City:','').replace('Business city:','').replace('—', '').replace('city','').replace('Business Location Street Address:','').replace('Stata','').replace(business_address,'')
-                                                                    if(len(re.findall('[a-zA-Z]+?:',business_city))>0):
-                                                                        business_city = business_city.replace(re.findall('[a-zA-Z]+?:',business_city)[0],'')
-                                                                    record['business_city'] = business_city
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                                                                except Exception as e:
-                                                                    print('city error'+str(e))
-                                                                    
-                                                            if len(re.findall('State:.*?:|Business state:.*?:',extracted_text)) > 0 and business_state == '':
-                                                                try:
-                                                                    business_state = re.findall('State:.*?:|Business state:.*?:',extracted_text)[0].replace('State:','').replace('Business state:','').replace('—', '')
-                                                                    if(len(re.findall('[a-zA-Z]+?:',business_state))>0):
-                                                                        business_state = business_state.replace(re.findall('[a-zA-Z]+?:',business_state)[0],'')
-                                                                    record['business_state'] = business_state
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                                                                except Exception as e:
-                                                                    print('business state error'+str(e))
-                                                                    
-                                                            if len(re.findall('Zip:.*?:|Business zip:.*',extracted_text)) > 0 and business_zip == '':
-                                                                try:
-                                                                    business_zip = re.findall('Zip:.*?:|Business zip:.*',extracted_text)[0].replace('Zip:','').replace('Business zip:','').replace('—', '')
-                                                                    if(len(re.findall('[a-zA-Z]+?:',business_zip))>0):
-                                                                        business_zip = business_zip.replace(re.findall('[a-zA-Z]+?:',business_zip)[0],'')
-                                                                    record['business_zip'] = business_zip
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                                                                except Exception as e:
-                                                                    print('business zip error'+str(e))
-                                                                
-                                                            if(',' not in business_address):
-                                                                business_address = business_address + ', ' + business_city + ', ' + business_state + ' '+ business_zip
-                                                            
-                                                            
-                                                            if len(re.findall('Contact Address:.*?:|Contact street address:.*',extracted_text)) > 0 and contact_address == '':
-                                                                try:
-                                                                    contact_address = re.findall('Contact Address:.*?:|Contact street address:.*',extracted_text)[0].replace('Contact Address:','').replace('Contact street address:','').replace('—', '')
-                                                                    if(len(re.findall('[a-zA-Z]+?:',contact_address))>0):
-                                                                        contact_address = contact_address.replace(re.findall('[a-zA-Z]+?:',contact_address)[0],'')
-                                                                    record['contact_address'] = contact_address
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                                                                except Exception as e:
-                                                                    print('contact address error'+str(e))
-                                                                
-                                                            if len(re.findall('City:.*?:|Contact city:.*?:',extracted_text)) > 0 and contact_city == '':
-                                                                try:
-                                                                    contact_city = re.findall('City:.*?:|Contact city:.*?:',extracted_text)[0].replace('City:','').replace('Contact city:','').replace('—', '')
-                                                                    if(len(re.findall('[a-zA-Z]+?:',contact_city))>0):
-                                                                        contact_city = contact_city.replace(re.findall('[a-zA-Z]+?:',contact_city)[0],'')
-                                                                    record['contact_city'] = contact_city
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                                                                except Exception as e:
-                                                                    print('contact city error'+str(e))
-                                                                    
-                                                            if len(re.findall('State:.*?:|Contact state:.*?:',extracted_text)) > 0 and contact_state == '':
-                                                                try:
-                                                                    contact_state = re.findall('State:.*?:|Contact state:.*?:',extracted_text)[0].replace('State:','').replace('Contact state:','').replace('—', '')
-                                                                    if(len(re.findall('[a-zA-Z]+?:',contact_state))>0):
-                                                                        contact_state = contact_state.replace(re.findall('[a-zA-Z]+?:',contact_state)[0],'')
-                                                                    record['contact_state'] = contact_state
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                                                                except Exception as e:
-                                                                    print('contact state error'+str(e))
-                                                                    
-                                                            if len(re.findall('Zip:.*?:|Contact zip:.*?',extracted_text)) > 0 and contact_zip == '':
-                                                                try:
-                                                                    contact_zip = re.findall('Zip:.*?:|Contact zip:.*?',extracted_text)[0].replace('Zip:','').replace('Contact zip:','').replace('—', '')
-                                                                    if(len(re.findall('[a-zA-Z]+?:',contact_zip))>0):
-                                                                        contact_zip = contact_zip.replace(re.findall('[a-zA-Z]+?:',contact_zip)[0],'')
-                                                                    record['contact_zip'] = contact_zip
-                                                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                                                                except Exception as e:
-                                                                    print('contact zip error'+str(e))
-                                                                    
-                                                            if(',' not in contact_address):
-                                                                contact_address = contact_address + ', ' + contact_city + ', ' + contact_state + ' '+ contact_zip
-                                                            else:
-                                                                pass
-                                                                
-                                                    if i ==0:            
-                                                        cv2.imwrite("text_info0.jpg", result)
-                                                    if i ==1:            
-                                                        cv2.imwrite("text_info1.jpg", result)
-                                                except Exception as e:
-                                                    print(e)
-                                                    
-                                                if(len(re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text))>0) and business_zip == '':
-                                                    try:
-                                                        business_zip = re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text)[0].replace('Signature City, State and Zip Code','')
-                                                        if(len(re.findall('\d+',business_zip))>0):
-                                                            business_zip = re.findall('\d+',business_zip)[0]
-                                                        record['business_zip'] = business_zip
-                                                    except Exception as e:
-                                                        print('business zip2 error'+str(e))
-                                                    
-                                                    
-                                                if(len(re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text))>0) and business_city == '':
-                                                    try:
-                                                        business_city = re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text)[0].replace('Signature City, State and Zip Code','')
-                                                        if(len(re.findall(',.*\d*',business_city))>0):
-                                                            business_city = business_city.replace(re.findall(',.*\d*',business_city)[0],'')
-                                                        record['business_city'] = business_city
-                                                    except Exception as e:
-                                                        print('business city2 error'+str(e))
-                                                    
-                                                if(len(re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text))>0) and business_state == '':
-                                                    try:
-                                                        business_state = re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text)[0].replace('Signature City, State and Zip Code','')
-                                                        if(len(re.findall('.*,',business_state))>0):
-                                                            business_state = business_state.replace(re.findall('.*,',business_state)[0],'')
-                                                        if(len(re.findall('\d+',business_state))>0):
-                                                            business_state = business_state.replace(re.findall('\d+',business_state)[0],'')
-                                                        record['business_state'] = business_state
-                                                    except Exception as e:
-                                                        print('business state2 error'+str(e))
-                                    except Exception as e:
-                                        print(e)
+                                    exhibit_info(pdf_path,record,folder_path,folder,pdf_file.lower())
                                                 
                                         
                                 if 'complaint' in pdf_file.lower():
                                     numbers = []
                                     try:
-                                        for i, image in enumerate([images[0],images[1],images[2]]):
+                                        images = convert_from_path(pdf_path)
+                                        for i, image in enumerate(images):
                                             text = pytesseract.image_to_string(image, lang='eng')
                                             for info in re.findall('.*\\n' ,text):
                                                 for number in re.findall('\$\d+,\d+\.\d+|\$\d+,\d+|\$\d+',info):
                                                     number = number.replace('$','').replace(',','')
                                                     numbers.append(float(number))
-                                        price = max(numbers)
-                                        record['price'] = price
+                                        if len(numbers)>0:
+                                            price = max(numbers)
+                                            record['price'] = price
                                     except Exception as e:
                                         print('complaint error'+str(e))
                             except Exception as e:
-                                print(e)
+                                print('error 1'+str(e))
                             
-                    records.append(record)
+                        records.append(record)
                             
 
                 for record in records:
@@ -710,24 +514,25 @@ def scrape(request):
                             'email': record['email'] if 'email' in record else None,
                             'BUSINESS NAME': record['business_name'] if 'business_name' in record else None,
                             'CREDITOR NAME': record['creadetor_name'] if 'creadetor_name' in record else None,
-                            'COMPANY SUID': record['company_suid'] if 'company_suid' in record else None,
-                            'OFFICERS COMANY': record['company_suid'] if 'company_suid' in record else None,
+                            'COMPANY SUED': record['company_suid'] if 'company_suid' in record else None,
+                            'OFFICERS COMANY': record['officers_comany'] if 'officers_comany' in record else None,
                             'BALANCE': record["price"] if 'price' in record else 0,
                             'BUSINESS ADDRESS': record['business_address'] if 'business_address' in record else None,
-                            'CONTACT ADDRESS': record['contact_address'] if 'contact_address' in record else None
+                            'COUNTY': record['county'] if 'county' in record else None,
+                            'DATE': record['date'] if 'date' in record else None
                         })
                     except Exception as e:
-                        print(e)
+                        print('erro in airtable ' +str(e))
 
                 context['records'] = records
                 html_template = loader.get_template('home/index.html')
                 return HttpResponse(html_template.render(context, request))
         except Exception as e:
-            print(e)
+            print('error2'+str(e))
             pass
         sleep(20)
     except Exception as e:
-        print(e)
+        print('error3'+str(e))
         pass
     
     
@@ -780,3 +585,336 @@ def getBylocation(image):
     # cv2.imshow('img', img)
     # cv2.waitKey(0)
     return creadetor_name
+
+
+def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
+    tel = []
+    email = []
+    business_name = ''
+    business_address = ''
+    business_city = ''
+    business_state = ''
+    business_zip = ''
+    first_name = ''
+    last_name = ''
+    date = ''
+    try:
+        images = convert_from_path(pdf_path, first_page=0, last_page=2)
+        for i, image in enumerate(images):
+            if i == 0 or i == 1:
+                # Perform OCR on each image
+                text = pytesseract.image_to_string(image, lang='eng')
+                try:
+                    img = convertImg(image)
+                    kernel_size = 5
+                    blur_gray = cv2.GaussianBlur(img,(kernel_size, kernel_size),0)
+                    low_threshold = 50
+                    high_threshold = 150
+                    edges = cv2.Canny(blur_gray, low_threshold, high_threshold)
+                    rho = 1 
+                    theta = np.pi / 180 
+                    threshold = 15 
+                    min_line_length = 250
+                    max_line_gap = 5
+                    line_image = np.copy(img) * 0
+                    lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
+                                        min_line_length, max_line_gap)
+                    for line in lines:
+                        try:
+                            for x1,y1,x2,y2 in line:
+                                cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+                        except Exception as e:
+                            print('creadetor_name2 error'+str(e))
+                    img = cv2.addWeighted(img, 1, line_image, 1, 0)
+                    
+                    # threshold the grayscale image
+                    thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+
+                    # use morphology erode to blur horizontally
+                    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (151, 3))
+                    morph = cv2.morphologyEx(thresh, cv2.MORPH_DILATE, kernel)
+
+                    # find contours
+                    cntrs = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    cntrs = cntrs[0] if len(cntrs) == 2 else cntrs[1]
+
+                    # find the topmost box
+                    ythresh = 1000000
+                    for c in cntrs:
+                        box = cv2.boundingRect(c)
+                        x,y,w,h = box
+                        if y < ythresh:
+                            topbox = box
+                            ythresh = y
+
+                    # Draw contours excluding the topmost box
+                    result = img.copy()
+                    x_index = 1
+                    for c in cntrs:
+                        box = cv2.boundingRect(c)
+                        if box != topbox:
+                            x,y,w,h = box
+                            text_region = thresh[y:y + h, x:x + w]
+                            # enhanced_region = cv2.bitwise_not(text_region)
+                            custom_config = r'--oem 3 --psm 6'
+                            extracted_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                            # cv2.imshow("GRAY", text_region)
+                            # cv2.waitKey(0)
+                            if len(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',extracted_text)) > 0:
+                                try:
+                                    tel.append(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',extracted_text)[0])
+                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                except Exception as e:
+                                    print('phone error'+str(e))
+
+                            
+                            if len(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net',extracted_text)) > 0:
+                                try:
+                                    email.append(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net',extracted_text)[0])
+                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                except Exception as e:
+                                    print('email error'+str(e))
+                                
+                            if len(re.findall('Full Name:.*|Full Name;.*|Contact Name:.*|Contact Name;.*',extracted_text))> 0 and first_name == '' and last_name == '':
+                                try:
+                                    name = re.findall('Full Name:.*|Full Name;.*|Contact Name:.*|Contact Name;.*',extracted_text)[0].replace('Full Name:','').replace('Full Name;','').replace('Contact Name:','').replace('Contact Name;','').strip()
+                                    first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
+                                    last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
+                                    record['first_name'] = first_name
+                                    record['last_name'] = last_name
+                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                except Exception as e:
+                                    print('full name error'+str(e))
+                                    
+                            if len(re.findall('First Name:.*',extracted_text)) > 0 and first_name == '':
+                                try:
+                                    first_name = re.findall('First Name:.*',extracted_text)[0].replace('First Name:','')
+                                    record['first_name'] = first_name
+                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                except Exception as e:
+                                    print('first name error'+str(e))
+                            
+                            if len(re.findall('Last Name:.*',extracted_text)) > 0 and last_name == '':
+                                try:
+                                    last_name = re.findall('Last Name:.*',extracted_text)[0].replace('Last Name:', '')
+                                    record['last_name'] = last_name
+                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                except Exception as e:
+                                    print('last name error'+str(e))
+                                
+                                
+                            if 'OWNER/GUARANTOR #1' in extracted_text and first_name == '' and last_name == '':
+                                try:
+                                    text_region = thresh[y+15:y + h + 140, x:x + w]
+                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                    cv2.rectangle(result, (x, y), (x+w, y+h+140), (0, 0, 255), 2)
+                                    if len(re.findall('Name:.*|Name;.*',croped_text))> 0:
+                                        name = re.findall('Name:.*|Name;.*',croped_text)[0].replace('Name:','').replace('Name;','').replace('By:','').strip()
+                                        first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
+                                        last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
+                                        record['first_name'] = first_name
+                                        record['last_name'] = last_name
+                                except Exception as e:
+                                    print('OWNER/GUARANTOR #1 error'+str(e))
+                                    
+                            if 'OWNER/GUARANTOR (#1)' in extracted_text and first_name == '' and last_name == '':
+                                try:
+                                    text_region = thresh[y+15:y + h + 140, x:x + w + 200]
+                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                    cv2.rectangle(result, (x, y), (x+w+ 200, y+h+140), (0, 0, 255), 2)
+                                    if len(re.findall('Name:.*|Name;.*|By:.*',croped_text))> 0:
+                                        name = re.findall('Name:.*|Name;.*|By:.*',croped_text)[0].replace('Name:','').replace('Name;','').replace('By:','').strip()
+                                        first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
+                                        last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
+                                        record['first_name'] = first_name
+                                        record['last_name'] = last_name
+                                except Exception as e:
+                                    print('OWNER/GUARANTOR (#1) error'+str(e))
+                                    
+                            if 'Name of Owner Guarantor 1:' in extracted_text and first_name == '' and last_name == '':
+                                try:
+                                    text_region = thresh[y:y + h + 10, x:x + w]
+                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).replace('Name of Owner Guarantor 1:','').strip()
+                                    cv2.rectangle(result, (x, y), (x+w, y+h+10), (0, 0, 255), 2)
+                                    name = croped_text.strip()
+                                    first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
+                                    last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
+                                    record['first_name'] = first_name
+                                    record['last_name'] = last_name
+                                except Exception as e:
+                                    print('Name of Owner Guarantor 1: error'+str(e))
+                                    
+                                    
+                            if len(re.findall('Legal Name:.*',extracted_text)) > 0 and business_name == '':
+                                try:
+                                    business_name = re.findall('Legal Name:.*',extracted_text)[0].replace('Legal Name:','')
+                                    if(len(re.findall('[a-zA-Z]+?:',business_name))>0):
+                                        business_name = business_name.replace(re.findall('[a-zA-Z]+?:',business_name)[0],'')
+                                    record['business_name'] = business_name
+                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                except Exception as e:
+                                    print('legal name error'+str(e))
+                                
+                            
+                            if 'Street Address' in extracted_text and business_address == '':
+                                try:
+                                    text_region = thresh[y-50:y + h, x:x + w+40]
+                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                    cv2.rectangle(result, (x, y-50), (x+w+40, y+h), (0, 0, 255), 2)
+                                    business_address = croped_text.replace('Street Address', '').replace('gS','').replace(':','').strip()
+                                    record['business_address'] = business_address
+                                except Exception as e:
+                                    print('Street Address'+str(e))
+                                    
+                            if 'City, State and Zip Code' in extracted_text and business_zip == '' and business_state == '' and business_city == '':
+                                try:
+                                    text_region = thresh[y-50:y + h, x:x + w]
+                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                    cv2.rectangle(result, (x, y-50), (x+w, y+h), (0, 0, 255), 2)
+                                    text = croped_text.replace('City, State and Zip Code', '').strip()
+                                    business_zip = re.findall('\d+',text)[0].replace(',', '').strip() if len(re.findall('\d+',text)) > 0 else ''
+                                    business_state = re.findall(',.*?\d+',text)[0].replace(business_zip, '').replace(',', '').strip() if len(re.findall(',.*?\d+',text)) > 0 else ''
+                                    business_city = re.findall('.*?,',text)[0].replace(',', '').strip() if len(re.findall('.*?,',text)) > 0 else ''
+                                    record['business_city'] = business_city
+                                    record['business_state'] = business_state
+                                    record['business_zip'] = business_zip
+                                except Exception as e:
+                                    print('City, State and Zip Code'+str(e))
+                                    
+                                        
+                            if len(re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*',extracted_text)) > 0 and (business_address == '' or business_address == ', ,'):
+                                try:
+                                    business_address = re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*',extracted_text)[0].replace('Business Location Street Address:','').replace('Business Address:','').replace('Business street address:','').replace('city','').replace('Physical Address:','').replace('Home Address:','')
+                                    if(len(re.findall('[a-zA-Z]+?:',business_address))>0):
+                                        business_address = business_address.replace(re.findall('[a-zA-Z]+?:',business_address)[0],'')
+                                    record['business_address'] = business_address
+                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                except Exception as e:
+                                    print('business address error'+str(e))
+                                    
+                                    
+                            if len(re.findall('City/State:.*',extracted_text)) > 0 and business_city == '' and business_state == '':
+                                try:
+                                    city_state= re.findall('City/State:.*',extracted_text)[0].split(',')
+                                    if len(city_state)>1:
+                                        record['business_city'] = city_state[0]
+                                        record['business_state'] = city_state[1]
+                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                except Exception as e:
+                                    print('city/state error'+str(e)) 
+                                    
+                                    
+                            if len(re.findall('City:.*?:|Business city:.*?:|Business Location Street Address:.*?Stata|City:.*|city:.*',extracted_text)) > 0 and business_city == '':
+                                try:
+                                    business_city = re.findall('City:.*?:|Business city:.*?:|Business Location Street Address:.*?Stata|City:.*|city:.*',extracted_text)[0].replace('City:','').replace('Business city:','').replace('—', '').replace('city','').replace('Business Location Street Address:','').replace('Stata','').replace(business_address,'')
+                                    if(len(re.findall('[a-zA-Z]+?:',business_city))>0):
+                                        business_city = business_city.replace(re.findall('[a-zA-Z]+?:',business_city)[0],'')
+                                    record['business_city'] = business_city
+                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                except Exception as e:
+                                    print('city error'+str(e))
+                                    
+                            if len(re.findall('State:.*?:|State:.*?;|Business state:.*?:|State:.*',extracted_text)) > 0 and business_state == '':
+                                try:
+                                    business_state = re.findall('State:.*?:|State:.*?;|Business state:.*?:|State:.*',extracted_text)[0].replace(';','').replace('State:','').replace('Business state:','').replace('_', '').replace('—', '').strip()
+                                    if(len(re.findall('[a-zA-Z]+?:',business_state))>0):
+                                        business_state = business_state.replace(re.findall('[a-zA-Z]+?:',business_state)[0],'')
+                                    record['business_state'] = business_state
+                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                except Exception as e:
+                                    print('business state error'+str(e))
+                                    
+                            if len(re.findall('Zip:.*?:|Business zip:.*|Zip:.*',extracted_text)) > 0 and business_zip == '':
+                                try:
+                                    business_zip = re.findall('Zip:.*?:|Business zip:.*|Zip:.*',extracted_text)[0].replace('Zip:','').replace('Business zip:','').replace('—', '')
+                                    if(len(re.findall('[a-zA-Z]+?:',business_zip))>0):
+                                        business_zip = business_zip.replace(re.findall('[a-zA-Z]+?:',business_zip)[0],'')
+                                    record['business_zip'] = business_zip
+                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                except Exception as e:
+                                    print('business zip error'+str(e))
+                                    
+                            if len(re.findall('[0-9]{2}/[0-9]{2}/[0-9]{4}',extracted_text)) > 0 and date == '' and ('NYSCEF' in extracted_text or 'CLERK' in extracted_text):
+                                try:
+                                    date = re.findall('[0-9]{2}/[0-9]{2}/[0-9]{4}',extracted_text)[0]
+                                    print(extracted_text)
+                                    record['date'] = date
+                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                except Exception as e:
+                                    print('date error'+str(e))
+                                
+                                
+
+                    if i ==0:            
+                        cv2.imwrite(folder_path + "/" + folder + '/'  +pdf_file+"0.jpg", result)
+                    if i ==1:            
+                        cv2.imwrite(folder_path + "/" + folder + '/'  +pdf_file+"1.jpg", result)            
+                    
+                except Exception as e:
+                    print('error in text_info'+str(e))
+                    
+                if(len(re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text))>0) and business_zip == '':
+                    try:
+                        business_zip = re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text)[0].replace('Signature City, State and Zip Code','')
+                        if(len(re.findall('\d+',business_zip))>0):
+                            business_zip = re.findall('\d+',business_zip)[0]
+                        record['business_zip'] = business_zip
+                    except Exception as e:
+                        print('business zip2 error'+str(e))
+                    
+                    
+                if(len(re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text))>0) and business_city == '':
+                    try:
+                        business_city = re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text)[0].replace('Signature City, State and Zip Code','')
+                        if(len(re.findall(',.*\d*',business_city))>0):
+                            business_city = business_city.replace(re.findall(',.*\d*',business_city)[0],'')
+                        record['business_city'] = business_city
+                    except Exception as e:
+                        print('business city2 error'+str(e))
+                    
+                if(len(re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text))>0) and business_state == '':
+                    try:
+                        business_state = re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text)[0].replace('Signature City, State and Zip Code','')
+                        if(len(re.findall('.*,',business_state))>0):
+                            business_state = business_state.replace(re.findall('.*,',business_state)[0],'')
+                        if(len(re.findall('\d+',business_state))>0):
+                            business_state = business_state.replace(re.findall('\d+',business_state)[0],'')
+                        record['business_state'] = business_state
+                    except Exception as e:
+                        print('business state2 error'+str(e))
+    except Exception as e:
+        print('error in text'+str(e))
+    if(',' not in business_address and business_address != ''):
+        record['business_address'] = business_address + (', ' + business_city if business_city else '') + (', ' + business_state if business_state else '') + ' '+ business_zip  
+        try:
+            record['county'] = get_county_from_address(business_zip.strip(), business_city.strip(), business_state.strip()) if get_county_from_address(business_zip.strip(), business_city.strip(), business_state.strip()) else ''  
+        except Exception as e:
+            print('county error '+ str(e))
+    elif ',' in business_address and 'county' not in record:
+        try:
+            record['county'] = get_county_from_address((re.findall('[0-9]{4,5}',business_address)[0] if len(re.findall('[0-9]{4,5}',business_address))>0 else '').strip(), (re.findall('[A-Za-z]* city',business_address.lower())[0] if len(re.findall('[A-Za-z]* city',business_address.lower()))>0 else '').strip(), (re.findall('[A-Z]{2} \d',business_address)[0] if len(re.findall('[A-Z]{2} \d',business_address))>0 else '').strip()) if get_county_from_address((re.findall('[0-9]{4,5}',business_address)[0] if len(re.findall('[0-9]{4,5}',business_address))>0 else '').strip(), (re.findall('[A-Za-z]* city',business_address.lower())[0] if len(re.findall('[A-Za-z]* city',business_address.lower()))>0 else '').strip(), (re.findall('[A-Z]{2} \d',business_address)[0] if len(re.findall('[A-Z]{2} \d',business_address))>0 else '').strip()) else ''  
+        except Exception as e:
+            print('county error '+ str(e))
+    
+
+    for t in tel:
+        if 'Cell Phone' in t:
+            record['tel'] = t.replace('Cell Phone','').replace(':','')  
+    if 'tel' not in record and len(tel)>0:
+        record['tel'] = tel[0]
+        
+    try:
+        doc = fitz.open(pdf_path)
+        page = doc.load_page(0)
+        page_text = page.get_text("text")
+        [email.append(word) for word in page_text.split() if len(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net',word))>0]
+        doc.close()
+    except Exception as e:
+        print('email pdf error'+str(e))
+        
+    print(email)
+    
+    if 'email' not in record and len(email)>1:
+        record['email'] = email[len(email)-1].strip()
+    if 'email' not in record and len(email)>0:
+        record['email'] = email[0].strip()
