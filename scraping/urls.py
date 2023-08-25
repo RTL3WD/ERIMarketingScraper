@@ -11,6 +11,7 @@ urlpatterns = [
     # The home page
     path('', views.index, name='home'),
     path('scrape', views.scrape, name='scrape'),
+    path('run_cron', views.run_cron, name='run_cron'),
     path('getRecordsFromPhoneBurner', views.getRecordsFromPhoneBurner, name='getRecordsFromPhoneBurner'),
 
     # Matches any html file

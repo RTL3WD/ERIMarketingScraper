@@ -28,6 +28,9 @@ import psutil
 from imutils import contours
 from uszipcode import SearchEngine, SimpleZipcode, ComprehensiveZipcode
 import fitz
+import logging
+
+logger = logging.getLogger(__name__)
 
 api_key = 'e77cab79ca105a72b529f7b0026b7ee1'
 url = 'https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange'
@@ -140,7 +143,7 @@ def scrape(request):
             today_date = current_date.strftime('%m/%d/%Y')
             driver =  webdriver.Chrome(options=optionsUC)
             try:
-                return False
+                # return False
                 driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
                 driver.get('https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange')
                 sleep(5)
@@ -248,7 +251,7 @@ def scrape(request):
                     record = {}
                     
                     record['folder'] = f'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId={folder.replace("-","/")}&display=all'
-                    if folder == 'M8a-UO5YiyGPkAlWgOPO_PLUS_A==':
+                    if folder != '':
                         for pdf_file in files:
                             if 'complaint' in pdf_file.lower():
                                 pdf_path = os.path.join(folder_path + '/' + folder, pdf_file)
@@ -455,19 +458,19 @@ def scrape(request):
                     try:
                         at = airtable.Airtable('appho2OWyOBvn6PPU', 'patwsQ3w8O4VGC05S.01759369d41db17822bcf0074f5daf046cc68ef136677dd68a15550f0e843bef')
                         print(record['email'] if 'email' in record else None)
-                        # at.create('Scrape Leads', {
-                        #     'Page Link': record['folder'] if 'folder' in record else None,
-                        #     'First Name': record['first_name'] if 'first_name' in record else None,
-                        #     'Last Name': record['last_name'] if 'last_name' in record else None,
-                        #     'phone': record['tel'] if 'tel' in record else None,
-                        #     'email': record['email'] if 'email' in record else None,
-                        #     'CREDITOR NAME': record['creadetor_name'] if 'creadetor_name' in record else None,
-                        #     'COMPANY SUED': record['company_suid'] if 'company_suid' in record else None,
-                        #     'BALANCE': record["price"] if 'price' in record else 0,
-                        #     'BUSINESS ADDRESS': record['business_address'] if 'business_address' in record else None,
-                        #     'COUNTY': record['county'] if 'county' in record else None,
-                        #     'DATE': record['date'] if 'date' in record else None
-                        # })
+                        at.create('Scrape Leads', {
+                            'Page Link': record['folder'] if 'folder' in record else None,
+                            'First Name': record['first_name'] if 'first_name' in record else None,
+                            'Last Name': record['last_name'] if 'last_name' in record else None,
+                            'phone': record['tel'] if 'tel' in record else None,
+                            'email': record['email'] if 'email' in record else None,
+                            'CREDITOR NAME': record['creadetor_name'] if 'creadetor_name' in record else None,
+                            'COMPANY SUED': record['company_suid'] if 'company_suid' in record else None,
+                            'BALANCE': record["price"] if 'price' in record else 0,
+                            'BUSINESS ADDRESS': record['business_address'] if 'business_address' in record else None,
+                            'COUNTY': record['county'] if 'county' in record else None,
+                            'DATE': record['date'] if 'date' in record else None
+                        })
                     except Exception as e:
                         print('erro in airtable ' +str(e))
 
@@ -871,10 +874,15 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
         
         
         
-        
+def run_cron(request):
+    logger.debug("Debug message")
+    logger.info("Info message")
+    logger.warning("Warning message")
+    logger.error("Error message")
+            
                     
 def scrape_cron():
-    print('start')
+    logger.info('start')
     try:
         optionsUC = webdriver.ChromeOptions()
         optionsUC.add_argument('--window-size=360,640')
@@ -897,11 +905,11 @@ def scrape_cron():
                 site_key = driver.find_element(By.CSS_SELECTOR, 'div.g-recaptcha').get_attribute('data-sitekey')  # grab from site
                 task = NoCaptchaTaskProxylessTask(url, site_key)
                 job = client.createTask(task)
-                print("Waiting to solution by Anticaptcha workers")
+                logger.info("Waiting to solution by Anticaptcha workers")
                 job.join()
                 # Receive response
                 response = job.get_solution_response()
-                print("Received solution", response)
+                logger.info("Received solution", response)
                 recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                 driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                 driver.execute_script("document.getElementById('captcha_form').submit();")
@@ -914,11 +922,11 @@ def scrape_cron():
                             site_key = driver.find_element(By.CSS_SELECTOR, 'div.g-recaptcha').get_attribute('data-sitekey')  # grab from site
                             task = NoCaptchaTaskProxylessTask(url, site_key)
                             job = client.createTask(task)
-                            print("Waiting to solution by Anticaptcha workers")
+                            logger.info("Waiting to solution by Anticaptcha workers")
                             job.join()
                             # Receive response
                             response = job.get_solution_response()
-                            print("Received solution", response)
+                            logger.info("Received solution", response)
                             recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                             driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                             driver.execute_script("document.getElementById('captcha_form').submit();")
@@ -959,7 +967,7 @@ def scrape_cron():
                                             download_file(href)
                                             sleep(5)
                                         except Exception as e:
-                                            print(e)
+                                            logger.info(e)
                                         sleep(5)
                             elemntDriver.quit()
                             sleep(3)                
@@ -967,11 +975,11 @@ def scrape_cron():
                         # driver.close()
                         driver.switch_to.window(driver.window_handles[0])
                     except Exception as e:
-                        print(e)
+                        logger.info(e)
                 
             except Exception as e:
-                print('-'*50)
-                print(e)
+                logger.info('-'*50)
+                logger.info(e)
             finally:
                 driver.quit()
                 PROCNAME = "chromedriver" # or chromedriver or IEDriverServer
@@ -1014,12 +1022,12 @@ def scrape_cron():
                                         price = max(numbers)
                                         record['price'] = price
                                 except Exception as e:
-                                    print('complaint error'+str(e))
+                                    logger.info('complaint error'+str(e))
                         if 'price' in record and record['price'] >= 20000: 
                             for pdf_file in files:
                                 try:
                                     pdf_path = os.path.join(folder_path + '/' + folder, pdf_file)
-                                    print(pdf_path)
+                                    logger.info(pdf_path)
                                     if 'summons' in pdf_file.lower() or 'petition' in pdf_file.lower():
                                         try:
                                             images = convert_from_path(pdf_path, first_page=0, last_page=2)
@@ -1085,7 +1093,7 @@ def scrape_cron():
                                                                         if creadetor_name == '':
                                                                             text_region = img[y1:y2 + 400, x1:x2]
                                                                             box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                                            print(re.findall('[\s\S]*?Plaintiff' ,box_test))
+                                                                            logger.info(re.findall('[\s\S]*?Plaintiff' ,box_test))
                                                                             if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0):
                                                                                 creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
                                                                             else:
@@ -1110,7 +1118,7 @@ def scrape_cron():
                                                             else:
                                                                 pass
                                                         except Exception as e:
-                                                            print('creadetor_name2 error'+str(e))
+                                                            logger.info('creadetor_name2 error'+str(e))
                                                     cv2.imwrite(folder_path+ "/" + folder + '/' + "text_under_line.jpg", img)
                                                     
                                                     
@@ -1161,7 +1169,7 @@ def scrape_cron():
                                                                             creadetor_name = creadetor_name.replace('werewerewenecncecncecnncncrener ener eserccccccccwooe XK INDEX N','').replace('Fa nnn nnn nnn nnn INDEX N','').replace('Fa nnn nnn nnn nnn INDEX N','')
                                                                             cv2.rectangle(result, (x, y+15), (x+w, y+h+70), (67, 255, 100), 2)
                                                                     except Exception as e:
-                                                                        print('creadetor_name error'+str(e))
+                                                                        logger.info('creadetor_name error'+str(e))
                                                                 else:
                                                                     pass
                                                                     # cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
@@ -1184,7 +1192,7 @@ def scrape_cron():
                                                     record['creadetor_name'] = creadetor_name
                                                     record['company_suid'] = company_suid
                                         except Exception as e:
-                                            print(e)
+                                            logger.info(e)
 
                                                 
                                                 
@@ -1194,16 +1202,16 @@ def scrape_cron():
                                             
                                     
                                 except Exception as e:
-                                    print('error 1'+str(e))
+                                    logger.info('error 1'+str(e))
                             
                             records.append(record)
                             
 
                 for record in records:
-                    print('-'*50)
+                    logger.info('-'*50)
                     try:
                         at = airtable.Airtable('appho2OWyOBvn6PPU', 'patwsQ3w8O4VGC05S.01759369d41db17822bcf0074f5daf046cc68ef136677dd68a15550f0e843bef')
-                        print(record['email'] if 'email' in record else None)
+                        logger.info(record['email'] if 'email' in record else None)
                         at.create('Scrape Leads', {
                             'Page Link': record['folder'] if 'folder' in record else None,
                             'First Name': record['first_name'] if 'first_name' in record else None,
@@ -1218,15 +1226,16 @@ def scrape_cron():
                             'DATE': record['date'] if 'date' in record else None
                         })
                     except Exception as e:
-                        print('erro in airtable ' +str(e))
+                        logger.info('erro in airtable ' +str(e))
 
                 context['records'] = records
         except Exception as e:
-            print('error2'+str(e))
+            logger.info('error2'+str(e))
             pass
         sleep(20)
     except Exception as e:
-        print('error3'+str(e))
+        logger.info('error3'+str(e))
+        print(e)
         pass
        
         

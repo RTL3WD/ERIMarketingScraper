@@ -42,9 +42,31 @@ INSTALLED_APPS = [
 ]
 
 CRONJOBS = [
-    ('0 */5 * * *', 'scraping.views.scrape_cron')
+    ('59 * * * *', 'scraping.views.scrape_cron')
 ]
-
+CRONTAB_LOG_FILE = '/home/ubuntu/Scraper/crontab.log'
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': '/home/ubuntu/Scraper/crontab.log',  # Specify the path to your log file
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
