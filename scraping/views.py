@@ -52,29 +52,6 @@ def pages(request):
 
     html_template = loader.get_template('home/index.html')
     return HttpResponse(html_template.render(context, request))
-
-def get_county_from_address(zipcode=None, city=None, state=None):
-    search = SearchEngine()
-    result = None
-    print('='*100)
-    if state:
-        if len(re.findall('\d',state))>0:
-            state = state.replace(re.findall('\d',state)[0],'').strip()
-        print(state)
-        result = search.by_state(state)
-    elif city:
-        print(city)
-        result = search.by_city(city)
-    elif zipcode:
-        print(zipcode)
-        result = search.by_zipcode(zipcode)
-    print('='*100)
-    
-    if result:
-        county = result[0].county
-        return county
-    else:
-        return None
     
     
 def download_file(download_url):
@@ -153,45 +130,17 @@ def scrape(request):
         optionsUC = webdriver.ChromeOptions()
         optionsUC.add_argument('--window-size=360,640')
         optionsUC.add_argument('--no-sandbox')
+        optionsUC.add_argument('--headless')
         count_types = ['Kings County Supreme Court', 'Monroe County Supreme Court', 'Washington County Supreme Court', 'Ontario County Supreme Court']
         # count_types = ['Kings County Supreme Court']
         try:
             current_date = datetime.utcnow()
-            one_day = timedelta(days=1)
+            one_day = timedelta(days=2)
             previous_date = (current_date - one_day).strftime('%m/%d/%Y')
             today_date = current_date.strftime('%m/%d/%Y')
             driver =  webdriver.Chrome(options=optionsUC)
             try:
-                # hrefss = ['https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=6EX0TNNc0QnNa/CDGn0xCQ==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1','https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=sQFus2Np8nx1hj/YMI1IhA==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=5','https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=xkrTPvUbcKSHTkheuDWkFA==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1','https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=b2tHRQg10udHQWOYfudvtQ==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1','https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=MzOiX75SO4ZjdZss/uPRUw==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=3','https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=HPCQuFE9n9yQ5m7VXwzGSw==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1','https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=FTuCmnOXNu4nPJ7rvoAiig==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1', 'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=qiDJalt0vbDTfXP7pdZZLw==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1', 'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=FktbgjuFTBVcsejt0E_PLUS_pnw==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1', 'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=RVPU28ulkrScAxnUoEopqw==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1', 'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=_PLUS_SyXPcSo0/R5Z4eBk4SFEw==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1']
-                # hrefss = ['https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=6EX0TNNc0QnNa/CDGn0xCQ==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1', 'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=b2tHRQg10udHQWOYfudvtQ==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1' , 'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=qiDJalt0vbDTfXP7pdZZLw==&display=all&courtType=Kings%20County%20Supreme%20Court&resultsPageNum=1']
-                # for href in hrefss:
-                #     elemntDriver = Chrome()
-                #     elemntDriver.get(href)
-                #     docs = elemntDriver.find_elements(By.CSS_SELECTOR, 'table.NewSearchResults > tbody > tr > td:nth-child(2) > a')
-                #     contentName= elemntDriver.find_element(By.CSS_SELECTOR, '#row').get_attribute('value').strip()
-                #     hrefs = []
-                    
-                #     for doc in docs:
-                #         hrefs.append({'href': doc.get_attribute('href'), 'name': doc.get_attribute('innerHTML').strip(),'contentName': contentName})
-                    
-                #     ActionChains(elemntDriver).key_down(Keys.CONTROL).send_keys("t").key_up(Keys.CONTROL).perform()
-                #     elemntDriver.execute_script('''window.open("http://bings.com","_blank");''')
-                #     sleep(5)
-                #     elemntDriver.switch_to.window(elemntDriver.window_handles[1])
-                    
-                #     for href in hrefs:
-                #         print(href)
-                #         try:
-                #             elemntDriver.get(href['href'])
-                #             download_file(href)
-                #             sleep(5)
-                #         except Exception as e:
-                #             print(e)
-                #         sleep(5)
-                #     elemntDriver.quit()
-                #     sleep(3)    
-
-                # return False
+                return False
                 driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
                 driver.get('https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange')
                 sleep(5)
@@ -236,9 +185,13 @@ def scrape(request):
                         elements = driver.find_elements(By.CSS_SELECTOR, '#form > table.NewSearchResults > tbody > tr > td:nth-child(1) > a')
                         for i,e in enumerate(elements):
                             href = e.get_attribute('href')
-                            elemntDriver = Chrome()
+                            elemntDriver = webdriver.Chrome(options=optionsUC)
                             elemntDriver.get(href)
-                            docs = elemntDriver.find_elements(By.CSS_SELECTOR, 'table.NewSearchResults > tbody > tr > td:nth-child(2) > a')
+                            docs_elements = elemntDriver.find_elements(By.CSS_SELECTOR, 'table.NewSearchResults > tbody > tr')
+                            docs = []
+                            for doc in docs_elements:
+                                if 'processed' in doc.find_element(By.CSS_SELECTOR, 'td:nth-child(4)').get_attribute('innerHTML').strip().lower():
+                                    docs.append(doc.find_element(By.CSS_SELECTOR, 'td:nth-child(2) > a'))
                             contentName= elemntDriver.find_element(By.CSS_SELECTOR, '#row').get_attribute('value').strip()
                             hrefs = []
                             
@@ -249,17 +202,16 @@ def scrape(request):
                             elemntDriver.execute_script('''window.open("http://bings.com","_blank");''')
                             sleep(5)
                             elemntDriver.switch_to.window(elemntDriver.window_handles[1])
-                            
-                            for href in hrefs:
-                                print(href)
-                                try:
-                                    elemntDriver.get(href['href'])
-                                    download_file(href)
-                                    sleep(5)
-                                except Exception as e:
-                                    print(e)
-                                sleep(5)
-
+                            if len(docs_elements)>2:
+                                for href in hrefs:
+                                    if 'summons' in href['name'].lower() or 'exhibit' in href['name'].lower() or 'statement of authorization' in href['name'].lower() or 'complaint' in href['name'].lower(): 
+                                        try:
+                                            elemntDriver.get(href['href'])
+                                            download_file(href)
+                                            sleep(5)
+                                        except Exception as e:
+                                            print(e)
+                                        sleep(5)
                             elemntDriver.quit()
                             sleep(3)                
                             
@@ -294,212 +246,208 @@ def scrape(request):
                 for folder in folders:
                     files = [file for file in os.listdir(folder_path + '/' + folder) if file.endswith(".pdf")]
                     record = {}
-                    record['folder'] = folder
-                    if folder != '':
+                    
+                    record['folder'] = f'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId={folder.replace("-","/")}&display=all'
+                    if folder == 'M8a-UO5YiyGPkAlWgOPO_PLUS_A==':
                         for pdf_file in files:
-                            try:
+                            if 'complaint' in pdf_file.lower():
                                 pdf_path = os.path.join(folder_path + '/' + folder, pdf_file)
-                                if 'summons' in pdf_file.lower() or 'petition' in pdf_file.lower():
-                                    try:
-                                        images = convert_from_path(pdf_path, first_page=0, last_page=2)
-                                        for i, image in enumerate(images):
-                                            if i == 0:
-                                                custom_config = r'--oem 3 --psm 6'
-                                                #(left, upper, right, lower)
-                                                cropped_image = image.crop((1, 100, 1000, 1000))
-                                                text = pytesseract.image_to_string(cropped_image, lang='eng')
-                                                creadetor_name = ''
-                                                company_suid = ''
-                                                officers_comany = ''
-                                                #(left, upper, right, lower)
-                                                cropped_image = image.crop((1, 150, 1500, 1000))
-                                                img_bytes = io.BytesIO()
-                                                cropped_image.save(img_bytes, format='JPEG')  # Save as JPEG (or other supported format)
-                                                img_bytes = img_bytes.getvalue()
-                                                
-                                                # # Decode the image bytes using OpenCV
-                                                img = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_GRAYSCALE)
-                                                kernel_size = 5
-                                                blur_gray = cv2.GaussianBlur(img,(kernel_size, kernel_size),0)
-                                                low_threshold = 50
-                                                high_threshold = 150
-                                                edges = cv2.Canny(blur_gray, low_threshold, high_threshold)
-                                                rho = 1  # distance resolution in pixels of the Hough grid
-                                                theta = np.pi / 180  # angular resolution in radians of the Hough grid
-                                                threshold = 15  # minimum number of votes (intersections in Hough grid cell)
-                                                min_line_length = 250  # minimum number of pixels making up a line
-                                                max_line_gap = 5  # maximum gap in pixels between connectable line segments
-                                                line_image = np.copy(img) * 0  # creating a blank to draw lines on
+                                numbers = []
+                                try:
+                                    images = convert_from_path(pdf_path)
+                                    for i, image in enumerate(images):
+                                        text = pytesseract.image_to_string(image, lang='eng')
+                                        for info in re.findall('.*\\n' ,text):
+                                            for number in re.findall('\$\d+,\d+\.\d+|\$\d+,\d+|\$\d+',info):
+                                                number = number.replace('$','').replace(',','')
+                                                numbers.append(float(number))
+                                    if len(numbers)>0:
+                                        price = max(numbers)
+                                        record['price'] = price
+                                except Exception as e:
+                                    print('complaint error'+str(e))
+                        if 'price' in record and record['price'] >= 20000: 
+                            for pdf_file in files:
+                                try:
+                                    pdf_path = os.path.join(folder_path + '/' + folder, pdf_file)
+                                    print(pdf_path)
+                                    if 'summons' in pdf_file.lower() or 'petition' in pdf_file.lower():
+                                        try:
+                                            images = convert_from_path(pdf_path, first_page=0, last_page=2)
+                                            for i, image in enumerate(images):
+                                                if i == 0:
+                                                    custom_config = r'--oem 3 --psm 6'
+                                                    #(left, upper, right, lower)
+                                                    cropped_image = image.crop((1, 100, 1000, 1000))
+                                                    text = pytesseract.image_to_string(cropped_image, lang='eng')
+                                                    creadetor_name = ''
+                                                    company_suid = ''
+                                                    #(left, upper, right, lower)
+                                                    cropped_image = image.crop((1, 150, 1500, 1000))
+                                                    img_bytes = io.BytesIO()
+                                                    cropped_image.save(img_bytes, format='JPEG')  # Save as JPEG (or other supported format)
+                                                    img_bytes = img_bytes.getvalue()
+                                                    
+                                                    # # Decode the image bytes using OpenCV
+                                                    img = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_GRAYSCALE)
+                                                    kernel_size = 5
+                                                    blur_gray = cv2.GaussianBlur(img,(kernel_size, kernel_size),0)
+                                                    low_threshold = 50
+                                                    high_threshold = 150
+                                                    edges = cv2.Canny(blur_gray, low_threshold, high_threshold)
+                                                    rho = 1  # distance resolution in pixels of the Hough grid
+                                                    theta = np.pi / 180  # angular resolution in radians of the Hough grid
+                                                    threshold = 15  # minimum number of votes (intersections in Hough grid cell)
+                                                    min_line_length = 250  # minimum number of pixels making up a line
+                                                    max_line_gap = 5  # maximum gap in pixels between connectable line segments
+                                                    line_image = np.copy(img) * 0  # creating a blank to draw lines on
 
-                                                # Run Hough on edge detected image
-                                                # Output "lines" is an array containing endpoints of detected line segments
-                                                lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
-                                                                    min_line_length, max_line_gap)
-                                                image_height, image_width = img.shape[:2]
-                                                upper_x1 = 0
-                                                upper_y1 = 0
-                                                for i,line in enumerate(lines):
-                                                    x1, y1, x2, y2 = line[0]
-                                                    slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
-                                                    angle = np.arctan(slope) * 180 / np.pi
-                                                    average_y = (y1 + y2) / 2
-                                                    try:
-                                                        if abs(angle) < 10:
-                                                            if average_y < image_height / 2:
-                                                                for x1,y1,x2,y2 in line:
-                                                                    upper_x1 = x1
-                                                                    upper_y1 = y1 +70
-                                                    except Exception as e:
-                                                        pass
-                                                                    
-                                                
-                                                for i,line in enumerate(lines):
-                                                    x1, y1, x2, y2 = line[0]
-                                                    slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
-                                                    angle = np.arctan(slope) * 180 / np.pi
-                                                    average_y = (y1 + y2) / 2
-                                                    try:
-                                                        if abs(angle) < 10:
-                                                            if average_y < image_height / 2:
-                                                                for x1,y1,x2,y2 in line:
-                                                                    if creadetor_name == '':
-                                                                        text_region = img[y1:y2 + 400, x1:x2]
-                                                                        box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                                        print(re.findall('[\s\S]*?Plaintiff' ,box_test))
-                                                                        if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0):
-                                                                            creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
-                                                                        else:
-                                                                            text_region = img[y1:y2 + 70, x1:x2]
-                                                                            creadetor_name = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                                        cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
-                                                                        cv2.rectangle(img, (x1, y1), (x2, y2+400), (67, 255, 100), 2)
-                                                            else:
-                                                                for x1,y1,x2,y2 in line:
-                                                                    text_region = img[y1 - 500:y2 , x1:x2]
-                                                                    box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                                    if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test))>0):
-                                                                        company_suid = re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test)[0].replace('Defendants','').strip()
-                                                                        if(len(re.findall('-against-\\n|-against-\\n\\n' ,company_suid))>0):
-                                                                            company_suid = company_suid.replace(re.findall('-against-\\n|-against-\\n\\n' ,company_suid)[0], '')
-
-                                                                    if(len(re.findall('Defendants\\n.*?,|Defendants\\n\\n.*?,|Defendants\\n\\n.*?;|Defendants[\s\S]*' ,box_test))>0):
-                                                                        officers_comany = re.findall('Defendants\\n.*?,|Defendants\\n\\n.*?,|Defendants\\n\\n.*?;|Defendants[\s\S]*' ,box_test)[0].replace('Defendants.', '').replace('Defendants', '').strip()
-                                                                        if(len(re.findall('Defendants\\n|Defendants\\n\\n' ,officers_comany))>0):
-                                                                            officers_comany = officers_comany.replace(re.findall('Defendants\\n|Defendants\\n\\n' ,officers_comany)[0], '')
-                                                                    
-                                                                    cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
-                                                                    cv2.rectangle(img, (upper_x1 if upper_x1 else x1, upper_y1 if upper_y1 else y1 - 500), (x2, y2), (67, 255, 100), 2)
-                                                        else:
+                                                    # Run Hough on edge detected image
+                                                    # Output "lines" is an array containing endpoints of detected line segments
+                                                    lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
+                                                                        min_line_length, max_line_gap)
+                                                    image_height, image_width = img.shape[:2]
+                                                    upper_x1 = 0
+                                                    upper_y1 = 0
+                                                    for i,line in enumerate(lines):
+                                                        x1, y1, x2, y2 = line[0]
+                                                        slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
+                                                        angle = np.arctan(slope) * 180 / np.pi
+                                                        average_y = (y1 + y2) / 2
+                                                        try:
+                                                            if abs(angle) < 10:
+                                                                if average_y < image_height / 2:
+                                                                    for x1,y1,x2,y2 in line:
+                                                                        upper_x1 = x1
+                                                                        upper_y1 = y1 +70
+                                                        except Exception as e:
                                                             pass
-                                                    except Exception as e:
-                                                        print('creadetor_name2 error'+str(e))
-                                                cv2.imwrite(folder_path+ "/" + folder + '/' + "text_under_line.jpg", img)
-                                                
-                                                
-                                                if( len(creadetor_name) == 0 ):
-                                                    img = convertImg(image)
-                                                    # threshold the grayscale image
-                                                    thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+                                                                        
+                                                    
+                                                    for i,line in enumerate(lines):
+                                                        x1, y1, x2, y2 = line[0]
+                                                        slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
+                                                        angle = np.arctan(slope) * 180 / np.pi
+                                                        average_y = (y1 + y2) / 2
+                                                        try:
+                                                            if abs(angle) < 10:
+                                                                if average_y < image_height / 2:
+                                                                    for x1,y1,x2,y2 in line:
+                                                                        if creadetor_name == '':
+                                                                            text_region = img[y1:y2 + 400, x1:x2]
+                                                                            box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                            print(re.findall('[\s\S]*?Plaintiff' ,box_test))
+                                                                            if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0):
+                                                                                creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
+                                                                            else:
+                                                                                text_region = img[y1:y2 + 70, x1:x2]
+                                                                                creadetor_name = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                            cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+                                                                            cv2.rectangle(img, (x1, y1), (x2, y2+400), (67, 255, 100), 2)
+                                                                else:
+                                                                    for x1,y1,x2,y2 in line:
+                                                                        text_region = img[y1 - 500:y2 , x1:x2]
+                                                                        box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                        if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test))>0):
+                                                                            company_suid = re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test)[0].replace('Defendants','').strip()
+                                                                            if(len(re.findall('-against-\\n|-against-\\n\\n' ,company_suid))>0):
+                                                                                company_suid = company_suid.replace(re.findall('-against-\\n|-against-\\n\\n' ,company_suid)[0], '')
+                                                                        if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0 and creadetor_name == ''):
+                                                                                creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
 
-                                                    # use morphology erode to blur horizontally
-                                                    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (151, 3))
-                                                    morph = cv2.morphologyEx(thresh, cv2.MORPH_DILATE, kernel)
-
-                                                    # find contours
-                                                    cntrs = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                                                    cntrs = cntrs[0] if len(cntrs) == 2 else cntrs[1]
-
-                                                    # find the topmost box
-                                                    ythresh = 1000000
-                                                    for c in cntrs:
-                                                        box = cv2.boundingRect(c)
-                                                        x,y,w,h = box
-                                                        if y < ythresh:
-                                                            topbox = box
-                                                            ythresh = y
-
-                                                    # Draw contours excluding the topmost box
-                                                    result = img.copy()
-                                                    x_index = 1
-                                                    for i,c in enumerate(cntrs):
-                                                        box = cv2.boundingRect(c)
-                                                        if box != topbox:
-                                                            x,y,w,h = box
-                                                            text_region = thresh[y:y + h, x:x + w]
-                                                            # enhanced_region = cv2.bitwise_not(text_region)
-                                                            custom_config = r'--oem 3 --psm 6'
-                                                            extracted_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                            # cv2.imshow("GRAY", text_region)
-                                                            # cv2.waitKey(0)
-                                                            if(extracted_text == 'ne,' or extracted_text == 'nD,' or extracted_text == 'er,' or '— - X' in extracted_text or 'a , INDEX' in extracted_text or '— — XX' in extracted_text or 'asescs K INDEX N' in extracted_text or 'XxX' in extracted_text or '+--+' in extracted_text or '=== X' in extracted_text or 'eenX' in extracted_text):
-                                                                try:
-                                                                    if x_index == 1:
-                                                                        # text_region = thresh[y:y + h - 90, x:x + w]
-                                                                        # officers_comany = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                                        cv2.rectangle(result, (x, y), (x+w, y+h-90), (0, 0, 255), 2)
-                                                                        x_index = x_index +1
-                                                                    else:
-                                                                        text_region = thresh[y+15:y + h + 70, x:x + w]
-                                                                        creadetor_name = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                                        creadetor_name = creadetor_name.replace('werewerewenecncecncecnncncrener ener eserccccccccwooe XK INDEX N','').replace('Fa nnn nnn nnn nnn INDEX N','').replace('Fa nnn nnn nnn nnn INDEX N','')
-                                                                        cv2.rectangle(result, (x, y+15), (x+w, y+h+70), (67, 255, 100), 2)
-                                                                except Exception as e:
-                                                                    print('creadetor_name error'+str(e))
+                                                                        
+                                                                        cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+                                                                        cv2.rectangle(img, (upper_x1 if upper_x1 else x1, upper_y1 if upper_y1 else y1 - 500), (x2, y2), (67, 255, 100), 2)
                                                             else:
                                                                 pass
-                                                                # cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-
-                                                    # write result to disk
-                                                    cv2.imwrite(folder_path+ "/" + folder + '/'  + "text_above_lines_lines.jpg", result)
-
-                                                    #cv2.imshow("GRAY", gray)
-                                                    # cv2.imshow("RESULT", result)
-                                                    # cv2.waitKey(0)
-                                                    # cv2.destroyAllWindows()
+                                                        except Exception as e:
+                                                            print('creadetor_name2 error'+str(e))
+                                                    cv2.imwrite(folder_path+ "/" + folder + '/' + "text_under_line.jpg", img)
                                                     
-
-                                                if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text))>0) and company_suid == '':
-                                                    company_suid = re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text)[0]
-                                                    if(len(re.findall('-against-\\n|-against-\\n\\n' ,company_suid))>0):
-                                                        company_suid = company_suid.replace(re.findall('-against-\\n|-against-\\n\\n' ,company_suid)[0], '')
-
-                                                if(len(re.findall('Defendants\\n.*?,|Defendants\\n\\n.*?,|Defendants\\n\\n.*?;' ,text))>0) and officers_comany == '':
-                                                    officers_comany = re.findall('Defendants\\n.*?,|Defendants\\n\\n.*?,|Defendants\\n\\n.*?;' ,text)[0]
-                                                    if(len(re.findall('Defendants\\n|Defendants\\n\\n' ,officers_comany))>0):
-                                                        officers_comany = officers_comany.replace(re.findall('Defendants\\n|Defendants\\n\\n' ,officers_comany)[0], '')
-
                                                     
-                                                record['creadetor_name'] = creadetor_name
-                                                record['company_suid'] = company_suid
-                                                record['officers_comany'] = officers_comany
-                                    except Exception as e:
-                                        print(e)
+                                                    if( len(creadetor_name) == 0 ):
+                                                        img = convertImg(image)
+                                                        # threshold the grayscale image
+                                                        thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
 
-                                            
-                                            
-                                if 'exhibit' in pdf_file.lower() or 'statement of authorization' in pdf_file.lower():
-                                    exhibit_info(pdf_path,record,folder_path,folder,pdf_file.lower())
+                                                        # use morphology erode to blur horizontally
+                                                        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (151, 3))
+                                                        morph = cv2.morphologyEx(thresh, cv2.MORPH_DILATE, kernel)
+
+                                                        # find contours
+                                                        cntrs = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                                                        cntrs = cntrs[0] if len(cntrs) == 2 else cntrs[1]
+
+                                                        # find the topmost box
+                                                        ythresh = 1000000
+                                                        for c in cntrs:
+                                                            box = cv2.boundingRect(c)
+                                                            x,y,w,h = box
+                                                            if y < ythresh:
+                                                                topbox = box
+                                                                ythresh = y
+
+                                                        # Draw contours excluding the topmost box
+                                                        result = img.copy()
+                                                        x_index = 1
+                                                        for i,c in enumerate(cntrs):
+                                                            box = cv2.boundingRect(c)
+                                                            if box != topbox:
+                                                                x,y,w,h = box
+                                                                text_region = thresh[y:y + h, x:x + w]
+                                                                # enhanced_region = cv2.bitwise_not(text_region)
+                                                                custom_config = r'--oem 3 --psm 6'
+                                                                extracted_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                # cv2.imshow("GRAY", text_region)
+                                                                # cv2.waitKey(0)
+                                                                if(extracted_text == 'ne,' or extracted_text == 'nD,' or extracted_text == 'er,' or '— - X' in extracted_text or 'a , INDEX' in extracted_text or '— — XX' in extracted_text or 'asescs K INDEX N' in extracted_text or 'XxX' in extracted_text or '+--+' in extracted_text or '=== X' in extracted_text or 'eenX' in extracted_text):
+                                                                    try:
+                                                                        if x_index == 1:
+                                                                            # text_region = thresh[y:y + h - 90, x:x + w]
+                                                                            cv2.rectangle(result, (x, y), (x+w, y+h-90), (0, 0, 255), 2)
+                                                                            x_index = x_index +1
+                                                                        else:
+                                                                            text_region = thresh[y+15:y + h + 70, x:x + w]
+                                                                            creadetor_name = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                            creadetor_name = creadetor_name.replace('werewerewenecncecncecnncncrener ener eserccccccccwooe XK INDEX N','').replace('Fa nnn nnn nnn nnn INDEX N','').replace('Fa nnn nnn nnn nnn INDEX N','')
+                                                                            cv2.rectangle(result, (x, y+15), (x+w, y+h+70), (67, 255, 100), 2)
+                                                                    except Exception as e:
+                                                                        print('creadetor_name error'+str(e))
+                                                                else:
+                                                                    pass
+                                                                    # cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+
+                                                        # write result to disk
+                                                        cv2.imwrite(folder_path+ "/" + folder + '/'  + "text_above_lines_lines.jpg", result)
+
+                                                        #cv2.imshow("GRAY", gray)
+                                                        # cv2.imshow("RESULT", result)
+                                                        # cv2.waitKey(0)
+                                                        # cv2.destroyAllWindows()
+                                                        
+
+                                                    if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text))>0) and company_suid == '':
+                                                        company_suid = re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text)[0]
+                                                        if(len(re.findall('-against-\\n|-against-\\n\\n' ,company_suid))>0):
+                                                            company_suid = company_suid.replace(re.findall('-against-\\n|-against-\\n\\n' ,company_suid)[0], '')
+
                                                 
-                                        
-                                if 'complaint' in pdf_file.lower():
-                                    numbers = []
-                                    try:
-                                        images = convert_from_path(pdf_path)
-                                        for i, image in enumerate(images):
-                                            text = pytesseract.image_to_string(image, lang='eng')
-                                            for info in re.findall('.*\\n' ,text):
-                                                for number in re.findall('\$\d+,\d+\.\d+|\$\d+,\d+|\$\d+',info):
-                                                    number = number.replace('$','').replace(',','')
-                                                    numbers.append(float(number))
-                                        if len(numbers)>0:
-                                            price = max(numbers)
-                                            record['price'] = price
-                                    except Exception as e:
-                                        print('complaint error'+str(e))
-                            except Exception as e:
-                                print('error 1'+str(e))
+                                                    record['creadetor_name'] = creadetor_name
+                                                    record['company_suid'] = company_suid
+                                        except Exception as e:
+                                            print(e)
+
+                                                
+                                                
+                                    if 'exhibit' in pdf_file.lower() or 'statement of authorization' in pdf_file.lower():
+                                        exhibit_info(pdf_path,record,folder_path,folder,pdf_file.lower())
+                                                    
+                                            
+                                    
+                                except Exception as e:
+                                    print('error 1'+str(e))
                             
-                        records.append(record)
+                            records.append(record)
                             
 
                 for record in records:
@@ -507,20 +455,19 @@ def scrape(request):
                     try:
                         at = airtable.Airtable('appho2OWyOBvn6PPU', 'patwsQ3w8O4VGC05S.01759369d41db17822bcf0074f5daf046cc68ef136677dd68a15550f0e843bef')
                         print(record['email'] if 'email' in record else None)
-                        at.create('Scrape Leads', {
-                            'First Name': record['first_name'] if 'first_name' in record else None,
-                            'Last Name': record['last_name'] if 'last_name' in record else None,
-                            'phone': record['tel'] if 'tel' in record else None,
-                            'email': record['email'] if 'email' in record else None,
-                            'BUSINESS NAME': record['business_name'] if 'business_name' in record else None,
-                            'CREDITOR NAME': record['creadetor_name'] if 'creadetor_name' in record else None,
-                            'COMPANY SUED': record['company_suid'] if 'company_suid' in record else None,
-                            'OFFICERS COMANY': record['officers_comany'] if 'officers_comany' in record else None,
-                            'BALANCE': record["price"] if 'price' in record else 0,
-                            'BUSINESS ADDRESS': record['business_address'] if 'business_address' in record else None,
-                            'COUNTY': record['county'] if 'county' in record else None,
-                            'DATE': record['date'] if 'date' in record else None
-                        })
+                        # at.create('Scrape Leads', {
+                        #     'Page Link': record['folder'] if 'folder' in record else None,
+                        #     'First Name': record['first_name'] if 'first_name' in record else None,
+                        #     'Last Name': record['last_name'] if 'last_name' in record else None,
+                        #     'phone': record['tel'] if 'tel' in record else None,
+                        #     'email': record['email'] if 'email' in record else None,
+                        #     'CREDITOR NAME': record['creadetor_name'] if 'creadetor_name' in record else None,
+                        #     'COMPANY SUED': record['company_suid'] if 'company_suid' in record else None,
+                        #     'BALANCE': record["price"] if 'price' in record else 0,
+                        #     'BUSINESS ADDRESS': record['business_address'] if 'business_address' in record else None,
+                        #     'COUNTY': record['county'] if 'county' in record else None,
+                        #     'DATE': record['date'] if 'date' in record else None
+                        # })
                     except Exception as e:
                         print('erro in airtable ' +str(e))
 
@@ -590,7 +537,6 @@ def getBylocation(image):
 def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
     tel = []
     email = []
-    business_name = ''
     business_address = ''
     business_city = ''
     business_state = ''
@@ -598,10 +544,11 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
     first_name = ''
     last_name = ''
     date = ''
+    county = ''
     try:
-        images = convert_from_path(pdf_path, first_page=0, last_page=2)
+        images = convert_from_path(pdf_path)
         for i, image in enumerate(images):
-            if i == 0 or i == 1:
+            if i != -1:
                 # Perform OCR on each image
                 text = pytesseract.image_to_string(image, lang='eng')
                 try:
@@ -660,7 +607,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                             extracted_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
                             # cv2.imshow("GRAY", text_region)
                             # cv2.waitKey(0)
-                            if len(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',extracted_text)) > 0:
+                            if 'phone' in extracted_text.lower() and len(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',extracted_text)) > 0:
                                 try:
                                     tel.append(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',extracted_text)[0])
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
@@ -743,17 +690,20 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['last_name'] = last_name
                                 except Exception as e:
                                     print('Name of Owner Guarantor 1: error'+str(e))
-                                    
-                                    
-                            if len(re.findall('Legal Name:.*',extracted_text)) > 0 and business_name == '':
+                            print(extracted_text)        
+                            if 'Guarantor(s) Name:' in extracted_text and first_name == '' and last_name == '':
                                 try:
-                                    business_name = re.findall('Legal Name:.*',extracted_text)[0].replace('Legal Name:','')
-                                    if(len(re.findall('[a-zA-Z]+?:',business_name))>0):
-                                        business_name = business_name.replace(re.findall('[a-zA-Z]+?:',business_name)[0],'')
-                                    record['business_name'] = business_name
-                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                    text_region = thresh[y:y + h + 10, x:x + w]
+                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).replace('Guarantor(s) Name:','').replace('_','').replace('—','').strip()
+                                    cv2.rectangle(result, (x, y), (x+w, y+h+10), (0, 0, 255), 2)
+                                    name = croped_text.strip()
+                                    first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
+                                    last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
+                                    record['first_name'] = first_name
+                                    record['last_name'] = last_name
                                 except Exception as e:
-                                    print('legal name error'+str(e))
+                                    print('Name of Owner Guarantor Name: error'+str(e))
+                                    
                                 
                             
                             if 'Street Address' in extracted_text and business_address == '':
@@ -781,10 +731,9 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                 except Exception as e:
                                     print('City, State and Zip Code'+str(e))
                                     
-                                        
-                            if len(re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*',extracted_text)) > 0 and (business_address == '' or business_address == ', ,'):
+                            if len(re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*|Address:.*',extracted_text)) > 0 and (business_address == '' or business_address == ', ,'):
                                 try:
-                                    business_address = re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*',extracted_text)[0].replace('Business Location Street Address:','').replace('Business Address:','').replace('Business street address:','').replace('city','').replace('Physical Address:','').replace('Home Address:','')
+                                    business_address = re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*|Address:.*',extracted_text)[0].replace('Business Location Street Address:','').replace('Business Address:','').replace('Business street address:','').replace('city','').replace('Physical Address:','').replace('Home Address:','').replace('Address:.*','')
                                     if(len(re.findall('[a-zA-Z]+?:',business_address))>0):
                                         business_address = business_address.replace(re.findall('[a-zA-Z]+?:',business_address)[0],'')
                                     record['business_address'] = business_address
@@ -842,6 +791,13 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
                                     print('date error'+str(e))
+                                    
+                            if(len(re.findall('FILED:[\s\S]*?COUNTY',extracted_text))>0) and county == '':
+                                try:
+                                    county = re.findall('FILED:[\s\S]*?COUNTY',extracted_text)[0].replace('FILED:','')
+                                    record['county'] = county
+                                except Exception as e:
+                                    print('business zip2 error'+str(e))
                                 
                                 
 
@@ -853,6 +809,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                 except Exception as e:
                     print('error in text_info'+str(e))
                     
+                    
                 if(len(re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text))>0) and business_zip == '':
                     try:
                         business_zip = re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text)[0].replace('Signature City, State and Zip Code','')
@@ -861,7 +818,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                         record['business_zip'] = business_zip
                     except Exception as e:
                         print('business zip2 error'+str(e))
-                    
+                        
                     
                 if(len(re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text))>0) and business_city == '':
                     try:
@@ -884,17 +841,9 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                         print('business state2 error'+str(e))
     except Exception as e:
         print('error in text'+str(e))
+        
     if(',' not in business_address and business_address != ''):
         record['business_address'] = business_address + (', ' + business_city if business_city else '') + (', ' + business_state if business_state else '') + ' '+ business_zip  
-        try:
-            record['county'] = get_county_from_address(business_zip.strip(), business_city.strip(), business_state.strip()) if get_county_from_address(business_zip.strip(), business_city.strip(), business_state.strip()) else ''  
-        except Exception as e:
-            print('county error '+ str(e))
-    elif ',' in business_address and 'county' not in record:
-        try:
-            record['county'] = get_county_from_address((re.findall('[0-9]{4,5}',business_address)[0] if len(re.findall('[0-9]{4,5}',business_address))>0 else '').strip(), (re.findall('[A-Za-z]* city',business_address.lower())[0] if len(re.findall('[A-Za-z]* city',business_address.lower()))>0 else '').strip(), (re.findall('[A-Z]{2} \d',business_address)[0] if len(re.findall('[A-Z]{2} \d',business_address))>0 else '').strip()) if get_county_from_address((re.findall('[0-9]{4,5}',business_address)[0] if len(re.findall('[0-9]{4,5}',business_address))>0 else '').strip(), (re.findall('[A-Za-z]* city',business_address.lower())[0] if len(re.findall('[A-Za-z]* city',business_address.lower()))>0 else '').strip(), (re.findall('[A-Z]{2} \d',business_address)[0] if len(re.findall('[A-Z]{2} \d',business_address))>0 else '').strip()) else ''  
-        except Exception as e:
-            print('county error '+ str(e))
     
 
     for t in tel:
@@ -904,7 +853,8 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
         record['tel'] = tel[0]
         
     try:
-        doc = fitz.open(pdf_path)
+        print(os.getcwd().replace('scraping','')+'/' + pdf_path)
+        doc = fitz.open(os.getcwd().replace('scraping','')+'/' + pdf_path)
         page = doc.load_page(0)
         page_text = page.get_text("text")
         [email.append(word) for word in page_text.split() if len(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net',word))>0]
@@ -918,3 +868,365 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
         record['email'] = email[len(email)-1].strip()
     if 'email' not in record and len(email)>0:
         record['email'] = email[0].strip()
+        
+        
+        
+        
+                    
+def scrape_cron():
+    print('start')
+    try:
+        optionsUC = webdriver.ChromeOptions()
+        optionsUC.add_argument('--window-size=360,640')
+        optionsUC.add_argument('--no-sandbox')
+        optionsUC.add_argument('--headless')
+        count_types = ['Kings County Supreme Court', 'Monroe County Supreme Court', 'Washington County Supreme Court', 'Ontario County Supreme Court']
+        # count_types = ['Kings County Supreme Court']
+        try:
+            current_date = datetime.utcnow()
+            one_day = timedelta(days=2)
+            previous_date = (current_date - one_day).strftime('%m/%d/%Y')
+            today_date = current_date.strftime('%m/%d/%Y')
+            driver =  webdriver.Chrome(options=optionsUC)
+            try:
+                # return False
+                driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
+                driver.get('https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange')
+                sleep(5)
+                client = AnticaptchaClient(api_key)
+                site_key = driver.find_element(By.CSS_SELECTOR, 'div.g-recaptcha').get_attribute('data-sitekey')  # grab from site
+                task = NoCaptchaTaskProxylessTask(url, site_key)
+                job = client.createTask(task)
+                print("Waiting to solution by Anticaptcha workers")
+                job.join()
+                # Receive response
+                response = job.get_solution_response()
+                print("Received solution", response)
+                recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
+                driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
+                driver.execute_script("document.getElementById('captcha_form').submit();")
+                for count_type in count_types:
+                    try:
+                        driver.get('https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange')
+                        sleep(5)
+                        if(len(driver.find_elements(By.CSS_SELECTOR,'div.g-recaptcha'))>0):
+                            client = AnticaptchaClient(api_key)
+                            site_key = driver.find_element(By.CSS_SELECTOR, 'div.g-recaptcha').get_attribute('data-sitekey')  # grab from site
+                            task = NoCaptchaTaskProxylessTask(url, site_key)
+                            job = client.createTask(task)
+                            print("Waiting to solution by Anticaptcha workers")
+                            job.join()
+                            # Receive response
+                            response = job.get_solution_response()
+                            print("Received solution", response)
+                            recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
+                            driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
+                            driver.execute_script("document.getElementById('captcha_form').submit();")
+                        WebDriverWait(driver, 600).until(EC.presence_of_element_located((By.XPATH,f'//*[@id="selCountyCourt"]/option[text()="{count_type}"]')))
+                        driver.find_element(By.XPATH,f'//*[@id="selCountyCourt"]/option[text()="{count_type}"]').click()
+                        driver.find_element(By.CSS_SELECTOR,'#txtFilingDate').send_keys(Keys.BACKSPACE * 50)
+                        driver.find_element(By.CSS_SELECTOR,'#txtFilingDate').send_keys(today_date)
+                        driver.find_element(By.CSS_SELECTOR,'input[type*="submit"]').click()
+                        sleep(7)
+                        driver.find_element(By.XPATH,'//*[@id="selSortBy"]/option[text()="Case Type"]').click()
+                        driver.find_element(By.CSS_SELECTOR,'caption input[type*="submit"]').click()
+                        sleep(6)
+                        elements = driver.find_elements(By.CSS_SELECTOR, '#form > table.NewSearchResults > tbody > tr > td:nth-child(1) > a')
+                        for i,e in enumerate(elements):
+                            href = e.get_attribute('href')
+                            elemntDriver = webdriver.Chrome(options=optionsUC)
+                            elemntDriver.get(href)
+                            docs_elements = elemntDriver.find_elements(By.CSS_SELECTOR, 'table.NewSearchResults > tbody > tr')
+                            docs = []
+                            for doc in docs_elements:
+                                if 'processed' in doc.find_element(By.CSS_SELECTOR, 'td:nth-child(4)').get_attribute('innerHTML').strip().lower():
+                                    docs.append(doc.find_element(By.CSS_SELECTOR, 'td:nth-child(2) > a'))
+                            contentName= elemntDriver.find_element(By.CSS_SELECTOR, '#row').get_attribute('value').strip()
+                            hrefs = []
+                            
+                            for doc in docs:
+                                hrefs.append({'href': doc.get_attribute('href'), 'name': doc.get_attribute('innerHTML').strip(),'contentName': contentName})
+                            
+                            ActionChains(elemntDriver).key_down(Keys.CONTROL).send_keys("t").key_up(Keys.CONTROL).perform()
+                            elemntDriver.execute_script('''window.open("http://bings.com","_blank");''')
+                            sleep(5)
+                            elemntDriver.switch_to.window(elemntDriver.window_handles[1])
+                            if len(docs_elements)>2:
+                                for href in hrefs:
+                                    if 'summons' in href['name'].lower() or 'exhibit' in href['name'].lower() or 'statement of authorization' in href['name'].lower() or 'complaint' in href['name'].lower(): 
+                                        try:
+                                            elemntDriver.get(href['href'])
+                                            download_file(href)
+                                            sleep(5)
+                                        except Exception as e:
+                                            print(e)
+                                        sleep(5)
+                            elemntDriver.quit()
+                            sleep(3)                
+                            
+                        # driver.close()
+                        driver.switch_to.window(driver.window_handles[0])
+                    except Exception as e:
+                        print(e)
+                
+            except Exception as e:
+                print('-'*50)
+                print(e)
+            finally:
+                driver.quit()
+                PROCNAME = "chromedriver" # or chromedriver or IEDriverServer
+                for proc in psutil.process_iter():
+                    # check whether the process name matches
+                    if proc.name() == PROCNAME:
+                        proc.kill()
+                context = {'segment': 'index'}
+                records = []
+                folder_path='pdfs'
+                output_folder='ocr'
+                # Create the output folder if it doesn't exist
+                if not os.path.exists(output_folder):
+                    os.makedirs(output_folder)
+                if not os.path.exists(folder_path):
+                    os.makedirs(folder_path)
+
+                # Get a list of all files in the pdfs folder
+                folders = os.listdir(folder_path)
+                # folders = [folder for folder in folders if '907737-23' in folder]
+                for folder in folders:
+                    files = [file for file in os.listdir(folder_path + '/' + folder) if file.endswith(".pdf")]
+                    record = {}
+                    
+                    record['folder'] = f'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId={folder.replace("-","/")}&display=all'
+                    if folder != '':
+                        for pdf_file in files:
+                            if 'complaint' in pdf_file.lower():
+                                pdf_path = os.path.join(folder_path + '/' + folder, pdf_file)
+                                numbers = []
+                                try:
+                                    images = convert_from_path(pdf_path)
+                                    for i, image in enumerate(images):
+                                        text = pytesseract.image_to_string(image, lang='eng')
+                                        for info in re.findall('.*\\n' ,text):
+                                            for number in re.findall('\$\d+,\d+\.\d+|\$\d+,\d+|\$\d+',info):
+                                                number = number.replace('$','').replace(',','')
+                                                numbers.append(float(number))
+                                    if len(numbers)>0:
+                                        price = max(numbers)
+                                        record['price'] = price
+                                except Exception as e:
+                                    print('complaint error'+str(e))
+                        if 'price' in record and record['price'] >= 20000: 
+                            for pdf_file in files:
+                                try:
+                                    pdf_path = os.path.join(folder_path + '/' + folder, pdf_file)
+                                    print(pdf_path)
+                                    if 'summons' in pdf_file.lower() or 'petition' in pdf_file.lower():
+                                        try:
+                                            images = convert_from_path(pdf_path, first_page=0, last_page=2)
+                                            for i, image in enumerate(images):
+                                                if i == 0:
+                                                    custom_config = r'--oem 3 --psm 6'
+                                                    #(left, upper, right, lower)
+                                                    cropped_image = image.crop((1, 100, 1000, 1000))
+                                                    text = pytesseract.image_to_string(cropped_image, lang='eng')
+                                                    creadetor_name = ''
+                                                    company_suid = ''
+                                                    #(left, upper, right, lower)
+                                                    cropped_image = image.crop((1, 150, 1500, 1000))
+                                                    img_bytes = io.BytesIO()
+                                                    cropped_image.save(img_bytes, format='JPEG')  # Save as JPEG (or other supported format)
+                                                    img_bytes = img_bytes.getvalue()
+                                                    
+                                                    # # Decode the image bytes using OpenCV
+                                                    img = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_GRAYSCALE)
+                                                    kernel_size = 5
+                                                    blur_gray = cv2.GaussianBlur(img,(kernel_size, kernel_size),0)
+                                                    low_threshold = 50
+                                                    high_threshold = 150
+                                                    edges = cv2.Canny(blur_gray, low_threshold, high_threshold)
+                                                    rho = 1  # distance resolution in pixels of the Hough grid
+                                                    theta = np.pi / 180  # angular resolution in radians of the Hough grid
+                                                    threshold = 15  # minimum number of votes (intersections in Hough grid cell)
+                                                    min_line_length = 250  # minimum number of pixels making up a line
+                                                    max_line_gap = 5  # maximum gap in pixels between connectable line segments
+                                                    line_image = np.copy(img) * 0  # creating a blank to draw lines on
+
+                                                    # Run Hough on edge detected image
+                                                    # Output "lines" is an array containing endpoints of detected line segments
+                                                    lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
+                                                                        min_line_length, max_line_gap)
+                                                    image_height, image_width = img.shape[:2]
+                                                    upper_x1 = 0
+                                                    upper_y1 = 0
+                                                    for i,line in enumerate(lines):
+                                                        x1, y1, x2, y2 = line[0]
+                                                        slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
+                                                        angle = np.arctan(slope) * 180 / np.pi
+                                                        average_y = (y1 + y2) / 2
+                                                        try:
+                                                            if abs(angle) < 10:
+                                                                if average_y < image_height / 2:
+                                                                    for x1,y1,x2,y2 in line:
+                                                                        upper_x1 = x1
+                                                                        upper_y1 = y1 +70
+                                                        except Exception as e:
+                                                            pass
+                                                                        
+                                                    
+                                                    for i,line in enumerate(lines):
+                                                        x1, y1, x2, y2 = line[0]
+                                                        slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
+                                                        angle = np.arctan(slope) * 180 / np.pi
+                                                        average_y = (y1 + y2) / 2
+                                                        try:
+                                                            if abs(angle) < 10:
+                                                                if average_y < image_height / 2:
+                                                                    for x1,y1,x2,y2 in line:
+                                                                        if creadetor_name == '':
+                                                                            text_region = img[y1:y2 + 400, x1:x2]
+                                                                            box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                            print(re.findall('[\s\S]*?Plaintiff' ,box_test))
+                                                                            if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0):
+                                                                                creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
+                                                                            else:
+                                                                                text_region = img[y1:y2 + 70, x1:x2]
+                                                                                creadetor_name = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                            cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+                                                                            cv2.rectangle(img, (x1, y1), (x2, y2+400), (67, 255, 100), 2)
+                                                                else:
+                                                                    for x1,y1,x2,y2 in line:
+                                                                        text_region = img[y1 - 500:y2 , x1:x2]
+                                                                        box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                        if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test))>0):
+                                                                            company_suid = re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test)[0].replace('Defendants','').strip()
+                                                                            if(len(re.findall('-against-\\n|-against-\\n\\n' ,company_suid))>0):
+                                                                                company_suid = company_suid.replace(re.findall('-against-\\n|-against-\\n\\n' ,company_suid)[0], '')
+                                                                        if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0 and creadetor_name == ''):
+                                                                                creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
+
+                                                                        
+                                                                        cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+                                                                        cv2.rectangle(img, (upper_x1 if upper_x1 else x1, upper_y1 if upper_y1 else y1 - 500), (x2, y2), (67, 255, 100), 2)
+                                                            else:
+                                                                pass
+                                                        except Exception as e:
+                                                            print('creadetor_name2 error'+str(e))
+                                                    cv2.imwrite(folder_path+ "/" + folder + '/' + "text_under_line.jpg", img)
+                                                    
+                                                    
+                                                    if( len(creadetor_name) == 0 ):
+                                                        img = convertImg(image)
+                                                        # threshold the grayscale image
+                                                        thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+
+                                                        # use morphology erode to blur horizontally
+                                                        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (151, 3))
+                                                        morph = cv2.morphologyEx(thresh, cv2.MORPH_DILATE, kernel)
+
+                                                        # find contours
+                                                        cntrs = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                                                        cntrs = cntrs[0] if len(cntrs) == 2 else cntrs[1]
+
+                                                        # find the topmost box
+                                                        ythresh = 1000000
+                                                        for c in cntrs:
+                                                            box = cv2.boundingRect(c)
+                                                            x,y,w,h = box
+                                                            if y < ythresh:
+                                                                topbox = box
+                                                                ythresh = y
+
+                                                        # Draw contours excluding the topmost box
+                                                        result = img.copy()
+                                                        x_index = 1
+                                                        for i,c in enumerate(cntrs):
+                                                            box = cv2.boundingRect(c)
+                                                            if box != topbox:
+                                                                x,y,w,h = box
+                                                                text_region = thresh[y:y + h, x:x + w]
+                                                                # enhanced_region = cv2.bitwise_not(text_region)
+                                                                custom_config = r'--oem 3 --psm 6'
+                                                                extracted_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                # cv2.imshow("GRAY", text_region)
+                                                                # cv2.waitKey(0)
+                                                                if(extracted_text == 'ne,' or extracted_text == 'nD,' or extracted_text == 'er,' or '— - X' in extracted_text or 'a , INDEX' in extracted_text or '— — XX' in extracted_text or 'asescs K INDEX N' in extracted_text or 'XxX' in extracted_text or '+--+' in extracted_text or '=== X' in extracted_text or 'eenX' in extracted_text):
+                                                                    try:
+                                                                        if x_index == 1:
+                                                                            # text_region = thresh[y:y + h - 90, x:x + w]
+                                                                            cv2.rectangle(result, (x, y), (x+w, y+h-90), (0, 0, 255), 2)
+                                                                            x_index = x_index +1
+                                                                        else:
+                                                                            text_region = thresh[y+15:y + h + 70, x:x + w]
+                                                                            creadetor_name = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                            creadetor_name = creadetor_name.replace('werewerewenecncecncecnncncrener ener eserccccccccwooe XK INDEX N','').replace('Fa nnn nnn nnn nnn INDEX N','').replace('Fa nnn nnn nnn nnn INDEX N','')
+                                                                            cv2.rectangle(result, (x, y+15), (x+w, y+h+70), (67, 255, 100), 2)
+                                                                    except Exception as e:
+                                                                        print('creadetor_name error'+str(e))
+                                                                else:
+                                                                    pass
+                                                                    # cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+
+                                                        # write result to disk
+                                                        cv2.imwrite(folder_path+ "/" + folder + '/'  + "text_above_lines_lines.jpg", result)
+
+                                                        #cv2.imshow("GRAY", gray)
+                                                        # cv2.imshow("RESULT", result)
+                                                        # cv2.waitKey(0)
+                                                        # cv2.destroyAllWindows()
+                                                        
+
+                                                    if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text))>0) and company_suid == '':
+                                                        company_suid = re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text)[0]
+                                                        if(len(re.findall('-against-\\n|-against-\\n\\n' ,company_suid))>0):
+                                                            company_suid = company_suid.replace(re.findall('-against-\\n|-against-\\n\\n' ,company_suid)[0], '')
+
+                                                
+                                                    record['creadetor_name'] = creadetor_name
+                                                    record['company_suid'] = company_suid
+                                        except Exception as e:
+                                            print(e)
+
+                                                
+                                                
+                                    if 'exhibit' in pdf_file.lower() or 'statement of authorization' in pdf_file.lower():
+                                        exhibit_info(pdf_path,record,folder_path,folder,pdf_file.lower())
+                                                    
+                                            
+                                    
+                                except Exception as e:
+                                    print('error 1'+str(e))
+                            
+                            records.append(record)
+                            
+
+                for record in records:
+                    print('-'*50)
+                    try:
+                        at = airtable.Airtable('appho2OWyOBvn6PPU', 'patwsQ3w8O4VGC05S.01759369d41db17822bcf0074f5daf046cc68ef136677dd68a15550f0e843bef')
+                        print(record['email'] if 'email' in record else None)
+                        at.create('Scrape Leads', {
+                            'Page Link': record['folder'] if 'folder' in record else None,
+                            'First Name': record['first_name'] if 'first_name' in record else None,
+                            'Last Name': record['last_name'] if 'last_name' in record else None,
+                            'phone': record['tel'] if 'tel' in record else None,
+                            'email': record['email'] if 'email' in record else None,
+                            'CREDITOR NAME': record['creadetor_name'] if 'creadetor_name' in record else None,
+                            'COMPANY SUED': record['company_suid'] if 'company_suid' in record else None,
+                            'BALANCE': record["price"] if 'price' in record else 0,
+                            'BUSINESS ADDRESS': record['business_address'] if 'business_address' in record else None,
+                            'COUNTY': record['county'] if 'county' in record else None,
+                            'DATE': record['date'] if 'date' in record else None
+                        })
+                    except Exception as e:
+                        print('erro in airtable ' +str(e))
+
+                context['records'] = records
+        except Exception as e:
+            print('error2'+str(e))
+            pass
+        sleep(20)
+    except Exception as e:
+        print('error3'+str(e))
+        pass
+       
+        

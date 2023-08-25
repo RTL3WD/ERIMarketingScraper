@@ -6,6 +6,15 @@ selenium
 python_anticaptcha
 pdf2image
 undetected_chromedriver
-
+pytesseract
+airtable
+opencv-python
+psutil
+imutils
+uszipcode
+fitz
+frontend
+tools
+python-Levenshtein
 # psycopg2-binary
 # mysqlclient

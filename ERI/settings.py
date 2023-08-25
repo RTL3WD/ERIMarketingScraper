@@ -25,12 +25,13 @@ SECRET_KEY = 'django-insecure-$&ka@ty3ug4!!5e+cp9gug89ovwg^zvh!dhp@ofv8p(kx&8qs)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['3.86.46.37']
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'django_crontab',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -38,6 +39,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'scraping'
+]
+
+CRONJOBS = [
+    ('0 */5 * * *', 'scraping.views.scrape_cron')
 ]
 
 MIDDLEWARE = [

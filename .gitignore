@@ -1,0 +1,8 @@
+/pdfs
+*.pdf
+/ERI/__pycache__/
+/scraping/__pycache__/
+*.deb
+/__pycache__/
+/scraping/migrations/__pycache__
+/scraping/static

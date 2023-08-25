@@ -106,8 +106,6 @@
                     <th scope="col">last name</th>
                     <th scope="col">CREDITOR NAME</th>
                     <th scope="col">company suid</th>
-                    <th scope="col">officers comany</th>
-                    <th scope="col">business name</th>
                     <th scope="col">county</th>
                     <th scope="col">business address</th>
                     <th scope="col">price</th>
@@ -120,7 +118,7 @@
                         {{forloop.counter}}
                       </td>
                       <td scope="row">
-                        {{record.folder}}
+                        <a href="{{record.folder}}">page link</a>
                       </td>
                       <td>
                         {{record.date}}
@@ -142,12 +140,6 @@
                       </td>
                       <td>
                         {{record.company_suid}}
-                      </td>
-                      <td>
-                        {{record.officers_comany}}
-                      </td>
-                      <td>
-                        {{record.business_name}}
                       </td>
                       <td>
                         {{record.county}}
