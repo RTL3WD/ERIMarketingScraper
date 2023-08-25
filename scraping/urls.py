@@ -13,8 +13,4 @@ urlpatterns = [
     path('scrape', views.scrape, name='scrape'),
     path('run_cron', views.run_cron, name='run_cron'),
     path('getRecordsFromPhoneBurner', views.getRecordsFromPhoneBurner, name='getRecordsFromPhoneBurner'),
-
-    # Matches any html file
-    re_path(r'^.*\.*', views.pages, name='pages'),
-
 ]

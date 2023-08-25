@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-$&ka@ty3ug4!!5e+cp9gug89ovwg^zvh!dhp@ofv8p(kx&8qs)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['3.86.46.37']
+ALLOWED_HOSTS = ['3.86.46.37','localhost']
 
 
 # Application definition
@@ -45,28 +45,28 @@ CRONJOBS = [
     ('59 * * * *', 'scraping.views.scrape_cron')
 ]
 CRONTAB_LOG_FILE = '/home/ubuntu/Scraper/crontab.log'
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-        },
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': '/home/ubuntu/Scraper/crontab.log',  # Specify the path to your log file
-        },
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-    },
-}
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'handlers': {
+#         'console': {
+#             'level': 'DEBUG',
+#             'class': 'logging.StreamHandler',
+#         },
+#         'file': {
+#             'level': 'DEBUG',
+#             'class': 'logging.FileHandler',
+#             'filename': '/home/ubuntu/Scraper/crontab.log',  # Specify the path to your log file
+#         },
+#     },
+#     'loggers': {
+#         'django': {
+#             'handlers': ['console', 'file'],
+#             'level': 'DEBUG',
+#             'propagate': True,
+#         },
+#     },
+# }
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
