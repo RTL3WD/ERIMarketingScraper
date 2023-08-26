@@ -779,7 +779,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                             if ('Printed Name:' in extracted_text or 'Print Name:' in extracted_text) and first_name == '' and last_name == '':
                                 try:
                                     text_region = thresh[y:y + h + 10, x:x + w]
-                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).replace('Printed Name:','').replace('Print Name:','').strip()
+                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).replace('Printed Name:','').replace('Print Name:','').replace('Signature:','').replace(':','').strip()
                                     cv2.rectangle(result, (x, y), (x+w, y+h+10), (0, 0, 255), 2)
                                     name = croped_text.strip()
                                     first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
