@@ -13,4 +13,5 @@ urlpatterns = [
     path('scrape', views.scrape, name='scrape'),
     path('run_cron', views.run_cron, name='run_cron'),
     path('getRecordsFromPhoneBurner', views.getRecordsFromPhoneBurner, name='getRecordsFromPhoneBurner'),
+    path('extract_folder/<path:folder>/', views.extract_folder, name='extract_folder'),
 ]

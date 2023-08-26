@@ -32,6 +32,7 @@ import logging
 import threading
 import concurrent.futures
 from .models import Lead
+from urllib.parse import unquote
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,8 @@ url = 'https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange'
 def index(request):
     context = {'segment': 'index'}
     context['records'] = []
+    leads = Lead.objects.all()
+    context['records'] = leads
     html_template = loader.get_template('home/index.html')
     return HttpResponse(html_template.render(context, request))
 
@@ -163,10 +166,12 @@ def download_pdfs(link,records):
                 except Exception as e:
                     print(e)
                 sleep(5)
-        existing_lead = Lead.objects.filter(folder_id=f'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId={href["contentName"].replace("-","/")}&display=all').first()
-        if not existing_lead:
-            extract_texts(href['contentName'],records)
-    elemntDriver.quit()
+        elemntDriver.quit()
+        existing_lead = Lead.objects.filter(folder_id=f'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId={contentName.replace("-","/")}&display=all').first()
+        # if not existing_lead:
+        extract_texts(contentName,records)
+    else:
+        elemntDriver.quit()
     sleep(3)          
     
     
@@ -211,7 +216,7 @@ def extract_texts(folder,records):
                         try:
                             images = convert_from_path(pdf_path, first_page=0, last_page=2)
                             for i, image in enumerate(images):
-                                if i == 0:
+                                if i == 0 or i == 1:
                                     custom_config = r'--oem 3 --psm 6'
                                     #(left, upper, right, lower)
                                     cropped_image = image.crop((1, 100, 1000, 1000))
@@ -355,11 +360,6 @@ def extract_texts(folder,records):
 
                                         # write result to disk
                                         cv2.imwrite(folder_path+ "/" + folder + '/'  + "text_above_lines_lines.jpg", result)
-
-                                        #cv2.imshow("GRAY", gray)
-                                        # cv2.imshow("RESULT", result)
-                                        # cv2.waitKey(0)
-                                        # cv2.destroyAllWindows()
                                         
 
                                     if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text))>0) and company_suid == '':
@@ -368,11 +368,11 @@ def extract_texts(folder,records):
                                             company_suid = company_suid.replace(re.findall('-against-\\n|-against-\\n\\n' ,company_suid)[0], '')
 
                                     if creadetor_name != '':
-                                        record['creadetor_name'] = creadetor_name
+                                        record['creadetor_name'] = creadetor_name.replace('Return To','').replace('Document Type: SUMMONS + COMPLAINT','')
                                     if company_suid != '':
                                         record['company_suid'] = company_suid
                         except Exception as e:
-                            print(e)
+                            print('error credtor '+ str(e))
 
                                 
                                 
@@ -468,7 +468,25 @@ def extract_folders(records):
         for future in futures:
             future.result()  
             
-            
+def extract_folder(request, folder):  
+    folder_path='pdfs'
+    decoded_folder = unquote(folder)
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    decoded_folder = decoded_folder.replace('https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=','').replace('&display=all','')
+    records = []
+    extract_texts(decoded_folder,records)
+
+    context = {'segment': 'index'}
+    context['records'] = []
+    leads = Lead.objects.all()
+    context['records'] = leads
+    html_template = loader.get_template('home/index.html')
+    return HttpResponse(html_template.render(context, request))
+    
+        
+    
+                         
 def scrape(request):
     print('start')
     try:
@@ -535,6 +553,17 @@ def scrape(request):
                         elements = driver.find_elements(By.CSS_SELECTOR, '#form > table.NewSearchResults > tbody > tr > td:nth-child(1) > a')
                         for i,e in enumerate(elements):
                             links.append(e.get_attribute('href'))
+                        next_page = True
+                        while(next_page):
+                            next_page_elemnt = driver.find_elements(By.XPATH,'//*[@class="pageNumbers"]/a[text()=">>"]')
+                            if len(next_page_elemnt)>0:
+                                driver.get(next_page_elemnt[0].get_attribute('href'))
+                                sleep(4)
+                                elements = driver.find_elements(By.CSS_SELECTOR, '#form > table.NewSearchResults > tbody > tr > td:nth-child(1) > a')
+                                for i,e in enumerate(elements):
+                                    links.append(e.get_attribute('href'))
+                            else:
+                                next_page = False
                                         
                         # driver.close()
                         driver.switch_to.window(driver.window_handles[0])
@@ -543,6 +572,12 @@ def scrape(request):
                 
                 # print(links)
                 # return False
+                driver.quit()
+                PROCNAME = "chromedriver" # or chromedriver or IEDriverServer
+                for proc in psutil.process_iter():
+                    # check whether the process name matches
+                    if proc.name() == PROCNAME:
+                        proc.kill()
                 with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                     futures = [executor.submit(download_pdfs, link, records) for link in links]
                     for future in futures:
@@ -551,16 +586,11 @@ def scrape(request):
                 print('-'*50)
                 print(e)
             finally:
-                driver.quit()
                 PROCNAME = "chromedriver" # or chromedriver or IEDriverServer
                 for proc in psutil.process_iter():
                     # check whether the process name matches
                     if proc.name() == PROCNAME:
                         proc.kill()
-                
-                # extract_folders(records)
-                    
-
                 context['records'] = records
                 html_template = loader.get_template('home/index.html')
                 return HttpResponse(html_template.render(context, request))
@@ -636,7 +666,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
     date = ''
     county = ''
     try:
-        images = convert_from_path(pdf_path,first_page=0,last_page=3)
+        images = convert_from_path(pdf_path)
         for i, image in enumerate(images):
             if i != -1:
                 # Perform OCR on each image
@@ -705,9 +735,9 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     print('phone error'+str(e))
 
                             
-                            if len(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net|\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$',extracted_text)) > 0:
+                            if len(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]{1,4}',extracted_text)) > 0:
                                 try:
-                                    email.append(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net|\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$',extracted_text)[0])
+                                    email.append(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]{1,4}',extracted_text)[0])
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
                                     print('email error'+str(e))
@@ -793,7 +823,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['last_name'] = last_name
                                 except Exception as e:
                                     print('Name of Owner Guarantor 1: error'+str(e))
-                            print(extracted_text)        
+
                             if 'Guarantor(s) Name:' in extracted_text and first_name == '' and last_name == '':
                                 try:
                                     text_region = thresh[y:y + h + 10, x:x + w]
@@ -821,10 +851,10 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                             
                             if 'Print Name' in extracted_text and first_name == '' and last_name == '':
                                 try:
-                                    text_region = thresh[y-50:y + h, x:x + w+40]
+                                    text_region = thresh[y-50:y + h, x-40:x + w+40]
                                     croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                    cv2.rectangle(result, (x, y-50), (x+w+40, y+h), (0, 0, 255), 2)
-                                    name = croped_text.replace('PrintName','').replace('Print Name','').strip()
+                                    cv2.rectangle(result, (x-40, y-50), (x+w+40, y+h), (0, 0, 255), 2)
+                                    name = croped_text.replace('PrintName','').replace('Print Name','').strip().replace('()','')
                                     first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
                                     last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
                                     record['first_name'] = first_name
@@ -838,7 +868,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
                                     cv2.rectangle(result, (x, y-50), (x+w+40, y+h), (0, 0, 255), 2)
                                     business_address = croped_text.replace('Street Address', '').replace('gS','').replace(':','').strip()
-                                    record['business_address'] = business_address
+                                    record['business_address'] = business_address.replace('SAME AS ABOVE','')
                                 except Exception as e:
                                     print('Street Address'+str(e))
                                     
@@ -862,7 +892,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     business_address = re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*|Address:.*',extracted_text)[0].replace('Business Location Street Address:','').replace('Business Address:','').replace('Business street address:','').replace('city','').replace('Physical Address:','').replace('Home Address:','').replace('Address:.*','')
                                     if(len(re.findall('[a-zA-Z]+?:',business_address))>0):
                                         business_address = business_address.replace(re.findall('[a-zA-Z]+?:',business_address)[0],'')
-                                    record['business_address'] = business_address
+                                    record['business_address'] = business_address.replace('SAME AS ABOVE','')
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
                                     print('business address error'+str(e))
@@ -926,11 +956,8 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     print('business zip2 error'+str(e))
                                 
                                 
-
-                    if i ==0:            
-                        cv2.imwrite(folder_path + "/" + folder + '/'  +pdf_file+"0.jpg", result)
-                    if i ==1:            
-                        cv2.imwrite(folder_path + "/" + folder + '/'  +pdf_file+"1.jpg", result)            
+     
+                    cv2.imwrite(folder_path + "/" + folder + '/'  +pdf_file+str(i)+".jpg", result)            
                     
                 except Exception as e:
                     print('error in text_info'+str(e))

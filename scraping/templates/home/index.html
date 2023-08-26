@@ -98,6 +98,7 @@
                 <thead class="thead-light">
                   <tr>
                     <th scope="col"></th>
+                    <th scope="col">scrape</th>
                     <th scope="col">Folder</th>
                     <th scope="col">date</th>
                     <th scope="col">email</th>
@@ -118,7 +119,12 @@
                         {{forloop.counter}}
                       </td>
                       <td scope="row">
-                        <a href="{{record.folder}}">page link</a>
+                        {% if record.folder_id %}
+                          <a href="{% url 'extract_folder' folder=record.folder_id|urlencode %}">Re Scrape</a>
+                        {% endif %}
+                      </td>
+                      <td scope="row">
+                        <a href="{{record.folder_id}}">page link</a>
                       </td>
                       <td>
                         {{record.date}}
