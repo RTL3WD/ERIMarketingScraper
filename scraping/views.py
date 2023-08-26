@@ -150,13 +150,14 @@ def download_pdfs(link,records):
     hrefs = []
     
     for doc in docs:
-        hrefs.append({'href': doc.get_attribute('href'), 'name': doc.get_attribute('innerHTML').strip(),'contentName': contentName})
+        if 'summons' in doc.get_attribute('innerHTML').strip().lower() or 'exhibit' in doc.get_attribute('innerHTML').strip().lower() or 'statement of authorization' in doc.get_attribute('innerHTML').strip().lower() or 'complaint' in doc.get_attribute('innerHTML').strip().lower(): 
+            hrefs.append({'href': doc.get_attribute('href'), 'name': doc.get_attribute('innerHTML').strip(),'contentName': contentName})
     
     ActionChains(elemntDriver).key_down(Keys.CONTROL).send_keys("t").key_up(Keys.CONTROL).perform()
     elemntDriver.execute_script('''window.open("http://bings.com","_blank");''')
     sleep(5)
     elemntDriver.switch_to.window(elemntDriver.window_handles[1])
-    if len(docs_elements)>2:
+    if len(hrefs)>2:
         for href in hrefs:
             if 'summons' in href['name'].lower() or 'exhibit' in href['name'].lower() or 'statement of authorization' in href['name'].lower() or 'complaint' in href['name'].lower(): 
                 try:
