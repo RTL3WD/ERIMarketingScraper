@@ -208,6 +208,7 @@ def extract_texts(folder,records):
                     print('complaint error'+str(e))
         print(record['price'] if 'price' in record else 'less')
         if 'price' in record and record['price'] >= 20000: 
+            print(files)
             for pdf_file in files:
                 try:
                     pdf_path = os.path.join(folder_path + '/' + folder, pdf_file)
@@ -217,160 +218,110 @@ def extract_texts(folder,records):
                             images = convert_from_path(pdf_path, first_page=0, last_page=2)
                             for i, image in enumerate(images):
                                 if i == 0 or i == 1:
-                                    custom_config = r'--oem 3 --psm 6'
-                                    #(left, upper, right, lower)
-                                    cropped_image = image.crop((1, 100, 1000, 1000))
-                                    text = pytesseract.image_to_string(cropped_image, lang='eng')
-                                    creadetor_name = ''
-                                    company_suid = ''
-                                    #(left, upper, right, lower)
-                                    cropped_image = image.crop((1, 150, 1500, 1000))
-                                    img_bytes = io.BytesIO()
-                                    cropped_image.save(img_bytes, format='JPEG')  # Save as JPEG (or other supported format)
-                                    img_bytes = img_bytes.getvalue()
-                                    
-                                    # # Decode the image bytes using OpenCV
-                                    img = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_GRAYSCALE)
-                                    kernel_size = 5
-                                    blur_gray = cv2.GaussianBlur(img,(kernel_size, kernel_size),0)
-                                    low_threshold = 50
-                                    high_threshold = 150
-                                    edges = cv2.Canny(blur_gray, low_threshold, high_threshold)
-                                    rho = 1  # distance resolution in pixels of the Hough grid
-                                    theta = np.pi / 180  # angular resolution in radians of the Hough grid
-                                    threshold = 15  # minimum number of votes (intersections in Hough grid cell)
-                                    min_line_length = 250  # minimum number of pixels making up a line
-                                    max_line_gap = 5  # maximum gap in pixels between connectable line segments
-                                    line_image = np.copy(img) * 0  # creating a blank to draw lines on
-
-                                    # Run Hough on edge detected image
-                                    # Output "lines" is an array containing endpoints of detected line segments
-                                    lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
-                                                        min_line_length, max_line_gap)
-                                    image_height, image_width = img.shape[:2]
-                                    upper_x1 = 0
-                                    upper_y1 = 0
-                                    for i,line in enumerate(lines):
-                                        x1, y1, x2, y2 = line[0]
-                                        slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
-                                        angle = np.arctan(slope) * 180 / np.pi
-                                        average_y = (y1 + y2) / 2
-                                        try:
-                                            if abs(angle) < 10:
-                                                if average_y < image_height / 2:
-                                                    for x1,y1,x2,y2 in line:
-                                                        upper_x1 = x1
-                                                        upper_y1 = y1 +70
-                                        except Exception as e:
-                                            pass
-                                                        
-                                    
-                                    for i,line in enumerate(lines):
-                                        x1, y1, x2, y2 = line[0]
-                                        slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
-                                        angle = np.arctan(slope) * 180 / np.pi
-                                        average_y = (y1 + y2) / 2
-                                        try:
-                                            if abs(angle) < 10:
-                                                if average_y < image_height / 2:
-                                                    for x1,y1,x2,y2 in line:
-                                                        if creadetor_name == '':
-                                                            text_region = img[y1:y2 + 400, x1:x2]
-                                                            box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                            print(re.findall('[\s\S]*?Plaintiff' ,box_test))
-                                                            if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0):
-                                                                creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
-                                                            else:
-                                                                text_region = img[y1:y2 + 70, x1:x2]
-                                                                creadetor_name = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                            cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
-                                                            cv2.rectangle(img, (x1, y1), (x2, y2+400), (67, 255, 100), 2)
-                                                else:
-                                                    for x1,y1,x2,y2 in line:
-                                                        text_region = img[y1 - 500:y2 , x1:x2]
-                                                        box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                        if(len(re.findall('against-\\n.*?,|against-\\n\\n.*?,|against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test))>0):
-                                                            company_suid = re.findall('against-\\n.*?,|against-\\n\\n.*?,|against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test)[0].replace('Defendants','').strip()
-                                                            if(len(re.findall('against-\\n|against-\\n\\n' ,company_suid))>0):
-                                                                company_suid = company_suid.replace(re.findall('against-\\n|against-\\n\\n' ,company_suid)[0], '')
-                                                        if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0 and creadetor_name == ''):
-                                                                creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
-
-                                                        
-                                                        cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
-                                                        cv2.rectangle(img, (upper_x1 if upper_x1 else x1, upper_y1 if upper_y1 else y1 - 500), (x2, y2), (67, 255, 100), 2)
-                                            else:
-                                                pass
-                                        except Exception as e:
-                                            print('creadetor_name2 error'+str(e))
-                                    cv2.imwrite(folder_path+ "/" + folder + '/' + "text_under_line.jpg", img)
-                                    
-                                    
-                                    if( len(creadetor_name) == 0 ):
-                                        img = convertImg(image)
-                                        # threshold the grayscale image
-                                        thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
-
-                                        # use morphology erode to blur horizontally
-                                        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (151, 3))
-                                        morph = cv2.morphologyEx(thresh, cv2.MORPH_DILATE, kernel)
-
-                                        # find contours
-                                        cntrs = cv2.findContours(morph, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                                        cntrs = cntrs[0] if len(cntrs) == 2 else cntrs[1]
-
-                                        # find the topmost box
-                                        ythresh = 1000000
-                                        for c in cntrs:
-                                            box = cv2.boundingRect(c)
-                                            x,y,w,h = box
-                                            if y < ythresh:
-                                                topbox = box
-                                                ythresh = y
-
-                                        # Draw contours excluding the topmost box
-                                        result = img.copy()
-                                        x_index = 1
-                                        for i,c in enumerate(cntrs):
-                                            box = cv2.boundingRect(c)
-                                            if box != topbox:
-                                                x,y,w,h = box
-                                                text_region = thresh[y:y + h, x:x + w]
-                                                # enhanced_region = cv2.bitwise_not(text_region)
-                                                custom_config = r'--oem 3 --psm 6'
-                                                extracted_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                # cv2.imshow("GRAY", text_region)
-                                                # cv2.waitKey(0)
-                                                if(extracted_text == 'ne,' or extracted_text == 'nD,' or extracted_text == 'er,' or '— - X' in extracted_text or 'a , INDEX' in extracted_text or '— — XX' in extracted_text or 'asescs K INDEX N' in extracted_text or 'XxX' in extracted_text or '+--+' in extracted_text or '=== X' in extracted_text or 'eenX' in extracted_text):
-                                                    try:
-                                                        if x_index == 1:
-                                                            # text_region = thresh[y:y + h - 90, x:x + w]
-                                                            cv2.rectangle(result, (x, y), (x+w, y+h-90), (0, 0, 255), 2)
-                                                            x_index = x_index +1
-                                                        else:
-                                                            text_region = thresh[y+15:y + h + 70, x:x + w]
-                                                            creadetor_name = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                                            creadetor_name = creadetor_name.replace('werewerewenecncecncecnncncrener ener eserccccccccwooe XK INDEX N','').replace('Fa nnn nnn nnn nnn INDEX N','').replace('Fa nnn nnn nnn nnn INDEX N','')
-                                                            cv2.rectangle(result, (x, y+15), (x+w, y+h+70), (67, 255, 100), 2)
-                                                    except Exception as e:
-                                                        print('creadetor_name error'+str(e))
-                                                else:
-                                                    pass
-                                                    # cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
-
-                                        # write result to disk
-                                        cv2.imwrite(folder_path+ "/" + folder + '/'  + "text_above_lines_lines.jpg", result)
+                                    try:
+                                        custom_config = r'--oem 3 --psm 6'
+                                        #(left, upper, right, lower)
+                                        cropped_image = image.crop((1, 100, 1000, 1000))
+                                        text = pytesseract.image_to_string(cropped_image, lang='eng')
+                                        creadetor_name = ''
+                                        company_suid = ''
+                                        #(left, upper, right, lower)
+                                        cropped_image = image.crop((1, 150, 1500, 1000))
+                                        img_bytes = io.BytesIO()
+                                        cropped_image.save(img_bytes, format='JPEG')  # Save as JPEG (or other supported format)
+                                        img_bytes = img_bytes.getvalue()
                                         
+                                        # # Decode the image bytes using OpenCV
+                                        img = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_GRAYSCALE)
+                                        kernel_size = 5
+                                        blur_gray = cv2.GaussianBlur(img,(kernel_size, kernel_size),0)
+                                        low_threshold = 50
+                                        high_threshold = 150
+                                        edges = cv2.Canny(blur_gray, low_threshold, high_threshold)
+                                        rho = 1  # distance resolution in pixels of the Hough grid
+                                        theta = np.pi / 180  # angular resolution in radians of the Hough grid
+                                        threshold = 15  # minimum number of votes (intersections in Hough grid cell)
+                                        min_line_length = 250  # minimum number of pixels making up a line
+                                        max_line_gap = 5  # maximum gap in pixels between connectable line segments
+                                        line_image = np.copy(img) * 0  # creating a blank to draw lines on
 
-                                    if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text))>0) and company_suid == '':
-                                        company_suid = re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text)[0]
-                                        if(len(re.findall('-against-\\n|-against-\\n\\n' ,company_suid))>0):
-                                            company_suid = company_suid.replace(re.findall('-against-\\n|-against-\\n\\n' ,company_suid)[0], '')
+                                        # Run Hough on edge detected image
+                                        # Output "lines" is an array containing endpoints of detected line segments
+                                        lines = []
+                                        lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
+                                                            min_line_length, max_line_gap)
+                                        image_height, image_width = img.shape[:2]
+                                        upper_x1 = 0
+                                        upper_y1 = 0
+                                        if np.any(lines):
+                                            print('start credtor')
+                                            print(i)
+                                            for i,line in enumerate(lines):
+                                                print('1')
+                                                print(line)
+                                                x1, y1, x2, y2 = line[0]
+                                                slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
+                                                angle = np.arctan(slope) * 180 / np.pi
+                                                average_y = (y1 + y2) / 2
+                                                try:
+                                                    if abs(angle) < 10:
+                                                        if average_y < image_height / 2:
+                                                            for x1,y1,x2,y2 in line:
+                                                                upper_x1 = x1
+                                                                upper_y1 = y1 +70
+                                                except Exception as e:
+                                                    pass
+                                            print('6')
+                                                                
+                                            
+                                            for i,line in enumerate(lines):
+                                                x1, y1, x2, y2 = line[0]
+                                                slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
+                                                angle = np.arctan(slope) * 180 / np.pi
+                                                average_y = (y1 + y2) / 2
+                                                try:
+                                                    if abs(angle) < 10:
+                                                        if average_y < image_height / 2:
+                                                            for x1,y1,x2,y2 in line:
+                                                                if creadetor_name == '':
+                                                                    text_region = img[y1:y2 + 400, x1:x2]
+                                                                    box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                    print(re.findall('[\s\S]*?Plaintiff' ,box_test))
+                                                                    if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0):
+                                                                        creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
+                                                                    cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+                                                                    cv2.rectangle(img, (x1, y1), (x2, y2+400), (67, 255, 100), 2)
+                                                        else:
+                                                            for x1,y1,x2,y2 in line:
+                                                                text_region = img[y1 - 500:y2 , x1:x2]
+                                                                box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                if(len(re.findall('against-\\n.*?,|against-\\n\\n.*?,|against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test))>0):
+                                                                    company_suid = re.findall('against-\\n.*?,|against-\\n\\n.*?,|against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test)[0].replace('Defendants','').strip()
+                                                                    if(len(re.findall('against-\\n|against-\\n\\n' ,company_suid))>0):
+                                                                        company_suid = company_suid.replace(re.findall('against-\\n|against-\\n\\n' ,company_suid)[0], '')
+                                                                if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0 and creadetor_name == ''):
+                                                                        creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
 
-                                    if creadetor_name != '':
-                                        record['creadetor_name'] = creadetor_name.replace('Return To','').replace('Document Type: SUMMONS + COMPLAINT','')
-                                    if company_suid != '':
-                                        record['company_suid'] = company_suid
+                                                                
+                                                                cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+                                                                cv2.rectangle(img, (upper_x1 if upper_x1 else x1, upper_y1 if upper_y1 else y1 - 500), (x2, y2), (67, 255, 100), 2)
+                                                    else:
+                                                        pass
+                                                except Exception as e:
+                                                    print('creadetor_name2 error'+str(e))
+                                            cv2.imwrite(folder_path+ "/" + folder + '/' + "text_under_line.jpg", img)
+                                        
+                                        if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text))>0) and company_suid == '':
+                                            company_suid = re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text)[0]
+                                            if(len(re.findall('-against-\\n|-against-\\n\\n' ,company_suid))>0):
+                                                company_suid = company_suid.replace(re.findall('-against-\\n|-against-\\n\\n' ,company_suid)[0], '')
+
+                                        if creadetor_name != '':
+                                            record['creadetor_name'] = creadetor_name.replace('Return To','').replace('Document Type: SUMMONS + COMPLAINT','')
+                                        if company_suid != '':
+                                            record['company_suid'] = company_suid
+                                    except Exception as err:
+                                        print('page number '+str(i)+' '+str(err))
                         except Exception as e:
                             print('error credtor '+ str(e))
 
@@ -727,7 +678,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                             extracted_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
                             # cv2.imshow("GRAY", text_region)
                             # cv2.waitKey(0)
-                            if 'phone' in extracted_text.lower() or '| ' in extracted_text and len(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',extracted_text)) > 0:
+                            if ('phone' in extracted_text.lower() or '| ' in extracted_text) and len(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',extracted_text)) > 0:
                                 try:
                                     tel.append(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',extracted_text)[0])
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
@@ -823,6 +774,19 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['last_name'] = last_name
                                 except Exception as e:
                                     print('Name of Owner Guarantor 1: error'+str(e))
+                                    
+                            if ('Printed Name:' in extracted_text or 'Print Name:' in extracted_text) and first_name == '' and last_name == '':
+                                try:
+                                    text_region = thresh[y:y + h + 10, x:x + w]
+                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).replace('Printed Name:','').replace('Print Name:','').strip()
+                                    cv2.rectangle(result, (x, y), (x+w, y+h+10), (0, 0, 255), 2)
+                                    name = croped_text.strip()
+                                    first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
+                                    last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
+                                    record['first_name'] = first_name
+                                    record['last_name'] = last_name
+                                except Exception as e:
+                                    print('Printed Name: error'+str(e))
 
                             if 'Guarantor(s) Name:' in extracted_text and first_name == '' and last_name == '':
                                 try:
@@ -840,9 +804,9 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                             
                             if 'Phone' in extracted_text:
                                 try:
-                                    text_region = thresh[y-50:y + h, x:x + w+40]
+                                    text_region = thresh[y-60:y + h, x:x + w+80]
                                     croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                    cv2.rectangle(result, (x+40, y-50), (x+w, y+h), (0, 0, 255), 2)
+                                    cv2.rectangle(result, (x+80, y-60), (x+w, y+h), (0, 0, 255), 2)
                                     if len(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',croped_text)) > 0:
                                         tel.append(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',croped_text)[0])
                                     
@@ -851,10 +815,10 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                             
                             if 'Print Name' in extracted_text and first_name == '' and last_name == '':
                                 try:
-                                    text_region = thresh[y-50:y + h, x-40:x + w+40]
+                                    text_region = thresh[y-50:y + h, x-60:x + w+40]
                                     croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                    cv2.rectangle(result, (x-40, y-50), (x+w+40, y+h), (0, 0, 255), 2)
-                                    name = croped_text.replace('PrintName','').replace('Print Name','').strip().replace('()','')
+                                    cv2.rectangle(result, (x-60, y-50), (x+w+40, y+h), (0, 0, 255), 2)
+                                    name = croped_text.replace('PrintName','').replace('Print Name','').replace('andTitle','').replace('and Title','').strip().replace('()','').replace('( )','')
                                     first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
                                     last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
                                     record['first_name'] = first_name
@@ -869,6 +833,10 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     cv2.rectangle(result, (x, y-50), (x+w+40, y+h), (0, 0, 255), 2)
                                     business_address = croped_text.replace('Street Address', '').replace('gS','').replace(':','').strip()
                                     record['business_address'] = business_address.replace('SAME AS ABOVE','')
+                                    if(len(re.findall('\n',record['business_address']))>0):
+                                        record['business_address'] = record['business_address'].split('\n')
+                                        record['business_address'] = record['business_address'][1]
+                                    print(record['business_address'])
                                 except Exception as e:
                                     print('Street Address'+str(e))
                                     
@@ -887,7 +855,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                 except Exception as e:
                                     print('City, State and Zip Code'+str(e))
                                     
-                            if len(re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*|Address:.*',extracted_text)) > 0 and (business_address == '' or business_address == ', ,'):
+                            if len(re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*',extracted_text)) > 0 and (business_address == '' or business_address == ', ,'):
                                 try:
                                     business_address = re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*|Address:.*',extracted_text)[0].replace('Business Location Street Address:','').replace('Business Address:','').replace('Business street address:','').replace('city','').replace('Physical Address:','').replace('Home Address:','').replace('Address:.*','')
                                     if(len(re.findall('[a-zA-Z]+?:',business_address))>0):
@@ -998,7 +966,14 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
     if(',' not in business_address and business_address != ''):
         record['business_address'] = business_address + (', ' + business_city if business_city else '') + (', ' + business_state if business_state else '') + ' '+ business_zip  
     
-
+    print('========================================================================')
+    print('========================================================================')
+    if(len(re.findall('\n',record['business_address']))>0):
+        record['business_address'] = record['business_address'].split('\n')
+        record['business_address'] = record['business_address'][1]
+    print(record['business_address'])
+    print('========================================================================')
+    print('========================================================================')
     for t in tel:
         if 'Cell Phone' in t:
             record['tel'] = t.replace('Cell Phone','').replace(':','')  
