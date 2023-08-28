@@ -16,5 +16,11 @@ class Lead(models.Model):
     business_address = models.CharField(max_length=100,default='')
     date = models.CharField(max_length=100,default='')
 
-    # def __str__(self):
-    #     return f"{self.first_name} {self.last_name}"
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"
+    
+    
+class CronJobs(models.Model):
+    date_created = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=200)
+    log = models.CharField(max_length=200)

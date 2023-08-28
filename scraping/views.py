@@ -27,7 +27,7 @@ import numpy as np
 import psutil
 import logging
 import concurrent.futures
-from .models import Lead
+from .models import Lead, CronJobs
 from urllib.parse import unquote
 
 logger = logging.getLogger(__name__)
@@ -1004,6 +1004,8 @@ def run_cron(request):
                     
 def scrape_cron():
     print('start')
+    cron_job = CronJobs(status="started", log='run started')
+    cron_job.save()
     try:
         optionsUC = webdriver.ChromeOptions()
         optionsUC.add_argument('--window-size=360,640')
@@ -1089,7 +1091,12 @@ def scrape_cron():
         except Exception as e:
             print('error2'+str(e))
             pass
-        sleep(20)
+        cron_job.status = "success"
+        cron_job.log = 'run success'
+        cron_job.save()
     except Exception as e:
         print('error3'+str(e))
+        cron_job.status = "error" 
+        cron_job.log = str(e)
+        cron_job.save()
         pass
