@@ -29,6 +29,7 @@ import logging
 import concurrent.futures
 from .models import Lead, CronJobs
 from urllib.parse import unquote
+import fitz
 
 logger = logging.getLogger(__name__)
 
@@ -141,21 +142,22 @@ def download_pdfs(link,records):
     docs = []
     for doc in docs_elements:
         if 'processed' in doc.find_element(By.CSS_SELECTOR, 'td:nth-child(4)').get_attribute('innerHTML').strip().lower():
-            docs.append(doc.find_element(By.CSS_SELECTOR, 'td:nth-child(2) > a'))
+            if len(doc.find_elements(By.CSS_SELECTOR, 'td:nth-child(2) > a'))>0:
+                docs.append(doc.find_element(By.CSS_SELECTOR, 'td:nth-child(2) > a'))
     contentName= elemntDriver.find_element(By.CSS_SELECTOR, '#row').get_attribute('value').strip()
     hrefs = []
     
     for doc in docs:
-        if 'summons' in doc.get_attribute('innerHTML').strip().lower() or 'exhibit' in doc.get_attribute('innerHTML').strip().lower() or 'statement of authorization' in doc.get_attribute('innerHTML').strip().lower() or 'complaint' in doc.get_attribute('innerHTML').strip().lower(): 
+        if 'summons' in doc.get_attribute('innerHTML').strip().lower() or 'petition' in doc.get_attribute('innerHTML').strip().lower() or 'exhibit' in doc.get_attribute('innerHTML').strip().lower() or 'statement of authorization' in doc.get_attribute('innerHTML').strip().lower() or 'complaint' in doc.get_attribute('innerHTML').strip().lower(): 
             hrefs.append({'href': doc.get_attribute('href'), 'name': doc.get_attribute('innerHTML').strip(),'contentName': contentName})
     
     ActionChains(elemntDriver).key_down(Keys.CONTROL).send_keys("t").key_up(Keys.CONTROL).perform()
     elemntDriver.execute_script('''window.open("http://bings.com","_blank");''')
     sleep(5)
     elemntDriver.switch_to.window(elemntDriver.window_handles[1])
-    if len(hrefs)>2:
+    if len(hrefs)>1:
         for href in hrefs:
-            if 'summons' in href['name'].lower() or 'exhibit' in href['name'].lower() or 'statement of authorization' in href['name'].lower() or 'complaint' in href['name'].lower(): 
+            if 'summons' in href['name'].lower() or 'petition' in href['name'].lower() or 'exhibit' in href['name'].lower() or 'statement of authorization' in href['name'].lower() or 'complaint' in href['name'].lower(): 
                 try:
                     elemntDriver.get(href['href'])
                     download_file(href)
@@ -166,7 +168,7 @@ def download_pdfs(link,records):
         elemntDriver.quit()
         existing_lead = Lead.objects.filter(folder_id=f'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId={contentName.replace("-","/")}&display=all').first()
         # if not existing_lead:
-        extract_texts(contentName,records)
+        extract_texts(contentName.replace("/","-"),records)
     else:
         elemntDriver.quit()
     sleep(3)          
@@ -251,11 +253,7 @@ def extract_texts(folder,records):
                                         upper_x1 = 0
                                         upper_y1 = 0
                                         if np.any(lines):
-                                            print('start credtor')
-                                            print(i)
                                             for i,line in enumerate(lines):
-                                                print('1')
-                                                print(line)
                                                 x1, y1, x2, y2 = line[0]
                                                 slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
                                                 angle = np.arctan(slope) * 180 / np.pi
@@ -268,7 +266,6 @@ def extract_texts(folder,records):
                                                                 upper_y1 = y1 +70
                                                 except Exception as e:
                                                     pass
-                                            print('6')
                                                                 
                                             
                                             for i,line in enumerate(lines):
@@ -281,21 +278,35 @@ def extract_texts(folder,records):
                                                         if average_y < image_height / 2:
                                                             for x1,y1,x2,y2 in line:
                                                                 if creadetor_name == '':
-                                                                    text_region = img[y1:y2 + 400, x1:x2]
+                                                                    try:
+                                                                        text_region = img[y1:y2 + 400, x1:x2]
+                                                                    except:
+                                                                        try:
+                                                                            text_region = img[y1:y2 + 300, x1:x2]
+                                                                        except:
+                                                                            text_region = img[y1:y2 + 200, x1:x2]
+                                                                    
                                                                     box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
                                                                     print(re.findall('[\s\S]*?Plaintiff' ,box_test))
                                                                     if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0):
                                                                         creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
                                                                     cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
-                                                                    cv2.rectangle(img, (x1, y1), (x2, y2+400), (67, 255, 100), 2)
+                                                                    # cv2.rectangle(img, (x1, y1), (x2, y2+400), (67, 255, 100), 2)
                                                         else:
                                                             for x1,y1,x2,y2 in line:
-                                                                text_region = img[y1 - 500:y2 , x1:x2]
+                                                                try:
+                                                                    text_region = img[y1 - 500:y2 , x1:x2]
+                                                                except:
+                                                                    try:
+                                                                        text_region = img[y1 - 400:y2 , x1:x2]
+                                                                    except:
+                                                                        text_region = img[y1 - 300:y2 , x1:x2]
+
                                                                 box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
                                                                 if(len(re.findall('against-\\n.*?,|against-\\n\\n.*?,|against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test))>0):
                                                                     company_suid = re.findall('against-\\n.*?,|against-\\n\\n.*?,|against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test)[0].replace('Defendants','').strip()
                                                                     if(len(re.findall('against-\\n|against-\\n\\n' ,company_suid))>0):
-                                                                        company_suid = company_suid.replace(re.findall('against-\\n|against-\\n\\n' ,company_suid)[0], '')
+                                                                        company_suid = company_suid.replace(re.findall('against-\\n|against-\\n\\n' ,company_suid)[0], '').replace('-',company_suid,1)
                                                                 if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0 and creadetor_name == ''):
                                                                         creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
 
@@ -353,19 +364,19 @@ def extract_texts(folder,records):
                 existing_lead.business_address = record['business_address'] if 'business_address' in record else ''
                 # ... Update other fields as needed ...
                 existing_lead.save()
-                at.update('Scrape Leads',existing_lead.airtable_id, {
-                    'Page Link': record['folder'] if 'folder' in record else None,
-                    'First Name': record['first_name'] if 'first_name' in record else None,
-                    'Last Name': record['last_name'] if 'last_name' in record else None,
-                    'phone': record['tel'] if 'tel' in record else None,
-                    'email': record['email'] if 'email' in record else None,
-                    'CREDITOR NAME': record['creadetor_name'] if 'creadetor_name' in record else None,
-                    'COMPANY SUED': record['company_suid'] if 'company_suid' in record else None,
-                    'BALANCE': record["price"] if 'price' in record else 0,
-                    'BUSINESS ADDRESS': record['business_address'] if 'business_address' in record else None,
-                    'COUNTY': record['county'] if 'county' in record else None,
-                    'DATE': record['date'] if 'date' in record else None
-                })
+                # at.update('Scrape Leads',existing_lead.airtable_id, {
+                #     'Page Link': record['folder'] if 'folder' in record else None,
+                #     'First Name': record['first_name'] if 'first_name' in record else None,
+                #     'Last Name': record['last_name'] if 'last_name' in record else None,
+                #     'phone': record['tel'] if 'tel' in record else None,
+                #     'email': record['email'] if 'email' in record else None,
+                #     'CREDITOR NAME': record['creadetor_name'] if 'creadetor_name' in record else None,
+                #     'COMPANY SUED': record['company_suid'] if 'company_suid' in record else None,
+                #     'BALANCE': record["price"] if 'price' in record else 0,
+                #     'BUSINESS ADDRESS': record['business_address'] if 'business_address' in record else None,
+                #     'COUNTY': record['county'] if 'county' in record else None,
+                #     'DATE': record['date'] if 'date' in record else None
+                # })
             else:
                 id = at.create('Scrape Leads', {
                     'Page Link': record['folder'] if 'folder' in record else None,
@@ -423,7 +434,7 @@ def extract_folder(request, folder):
         os.makedirs(folder_path)
     decoded_folder = decoded_folder.replace('https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=','').replace('&display=all','')
     records = []
-    extract_texts(decoded_folder,records)
+    extract_texts(decoded_folder.replace('/','-'),records)
 
     context = {'segment': 'index'}
     context['records'] = []
@@ -446,7 +457,7 @@ def scrape(request):
         count_types = ['Kings County Supreme Court', 'Monroe County Supreme Court', 'Washington County Supreme Court', 'Ontario County Supreme Court']
         try:
             current_date = datetime.utcnow()
-            one_day = timedelta(days=1)
+            one_day = timedelta(days=0)
             previous_date = (current_date - one_day).strftime('%m/%d/%Y')
             driver =  webdriver.Chrome(options=optionsUC)
             context = {'segment': 'index'}
@@ -496,9 +507,10 @@ def scrape(request):
                             driver.find_element(By.XPATH,'//*[@id="selSortBy"]/option[text()="Case Type"]').click()
                             driver.find_element(By.CSS_SELECTOR,'caption input[type*="submit"]').click()
                             sleep(6)
-                        elements = driver.find_elements(By.CSS_SELECTOR, '#form > table.NewSearchResults > tbody > tr > td:nth-child(1) > a')
+                        elements = driver.find_elements(By.CSS_SELECTOR, '#form > table.NewSearchResults > tbody > tr')
                         for i,e in enumerate(elements):
-                            links.append(e.get_attribute('href'))
+                            if 'Commercial' in driver.find_element(By.CSS_SELECTOR,'td:nth-child(1) > a').get_attribute('innerHTML'):
+                                links.append(e.find_element(By.CSS_SELECTOR,'td:nth-child(4)').get_attribute('href'))
                         next_page = True
                         while(next_page):
                             next_page_elemnt = driver.find_elements(By.XPATH,'//*[@class="pageNumbers"]/a[text()=">>"]')
@@ -683,20 +695,25 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                             
                             if len(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]{1,4}',extracted_text)) > 0:
                                 try:
-                                    if 'accounting'not in re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]{1,4}',extracted_text)[0]:
-                                        email.append(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]{1,4}',extracted_text)[0])
+                                    foundEmail = re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]{1,4}',extracted_text)[0]
+                                    if 'accounting'not in foundEmail and 'admin'not in foundEmail and 'customer'not in foundEmail:
+                                        email.append(foundEmail)
                                         cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
                                     print('email error'+str(e))
                                 
                             if len(re.findall('Full Name:.*|Full Name;.*|Contact Name:.*|Contact Name;.*|Owner: Name:.*',extracted_text))> 0 and first_name == '' and last_name == '':
                                 try:
-                                    name = re.findall('Full Name:.*|Full Name;.*|Contact Name:.*|Contact Name;.*|Owner: Name:.*',extracted_text)[0].replace('Full Name:','').replace('Full Name;','').replace('Contact Name:','').replace('Contact Name;','').replace('Owner: Name:','').strip()
-                                    first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
-                                    last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
-                                    record['first_name'] = first_name
-                                    record['last_name'] = last_name
+                                    text_region = thresh[y+15:y + h, x:x + w]
+                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                    if len(re.findall('Full Name:.*|Full Name;.*|Contact Name:.*|Contact Name;.*|Owner: Name:.*',croped_text))> 0:
+                                        name = re.findall('Full Name:.*|Full Name;.*|Contact Name:.*|Contact Name;.*|Owner: Name:.*',croped_text)[0].replace('Full Name:','').replace('Full Name;','').replace('Contact Name:','').replace('Contact Name;','').replace('Owner: Name:','').strip()
+                                        print(extracted_text)
+                                        first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
+                                        last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
+                                        record['first_name'] = first_name
+                                        record['last_name'] = last_name
                                 except Exception as e:
                                     print('full name error'+str(e))
                                     
@@ -722,8 +739,8 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     text_region = thresh[y+15:y + h + 140, x:x + w]
                                     croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
                                     cv2.rectangle(result, (x, y), (x+w, y+h+140), (0, 0, 255), 2)
-                                    if len(re.findall('Name:.*|Name;.*',croped_text))> 0:
-                                        name = re.findall('Name:.*|Name;.*',croped_text)[0].replace('Name:','').replace('Name;','').replace('By:','').strip()
+                                    if len(re.findall('Name:.*|Name;.*|By:.*|By;.*',croped_text))> 0:
+                                        name = re.findall('Name:.*|Name;.*|By:.*|By;.*',croped_text)[0].replace('Name:','').replace('Name;','').replace('By:','').replace('By;','').strip()
                                         first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
                                         last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
                                         record['first_name'] = first_name
@@ -770,6 +787,45 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['last_name'] = last_name
                                 except Exception as e:
                                     print('Name of Owner Guarantor 1: error'+str(e))
+                            
+
+                            if 'Guarantor(s) Name:' in extracted_text and first_name == '' and last_name == '':
+                                try:
+                                    text_region = thresh[y:y + h + 10, x:x + w]
+                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).replace('Guarantor(s) Name:','').replace('_','').replace('—','').strip()
+                                    cv2.rectangle(result, (x, y), (x+w, y+h+10), (0, 0, 255), 2)
+                                    name = croped_text.strip()
+                                    first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
+                                    last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
+                                    record['first_name'] = first_name
+                                    record['last_name'] = last_name
+                                except Exception as e:
+                                    print('Guarantor(s) Name: error'+str(e))
+                                    
+                            
+                            if 'phone' in extracted_text.lower():
+                                try:
+                                    text_region = thresh[y-60:y + h, x:x + w+80]
+                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                    cv2.rectangle(result, (x+80, y-60), (x+w, y+h), (0, 0, 255), 2)
+                                    if len(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',croped_text)) > 0:
+                                        tel.append(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',croped_text)[0])
+                                    
+                                except Exception as e:
+                                    print('Phone: error'+str(e)) 
+                            
+                            if 'Print Name' in extracted_text and first_name == '' and last_name == '':
+                                try:
+                                    text_region = thresh[y-50:y + h, x-60:x + w+40]
+                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                    cv2.rectangle(result, (x-60, y-50), (x+w+40, y+h), (0, 0, 255), 2)
+                                    name = croped_text.replace('PrintName','').replace('Print Name','').replace('andTitle','').replace('and Title','').strip().replace('()','').replace('( )','')
+                                    first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
+                                    last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
+                                    record['first_name'] = first_name
+                                    record['last_name'] = last_name
+                                except Exception as e:
+                                    print('Print Name: error'+str(e))    
                                     
                             if ('Printed Name:' in extracted_text or 'Print Name:' in extracted_text) and first_name == '' and last_name == '':
                                 try:
@@ -783,44 +839,6 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['last_name'] = last_name
                                 except Exception as e:
                                     print('Printed Name: error'+str(e))
-
-                            if 'Guarantor(s) Name:' in extracted_text and first_name == '' and last_name == '':
-                                try:
-                                    text_region = thresh[y:y + h + 10, x:x + w]
-                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).replace('Guarantor(s) Name:','').replace('_','').replace('—','').strip()
-                                    cv2.rectangle(result, (x, y), (x+w, y+h+10), (0, 0, 255), 2)
-                                    name = croped_text.strip()
-                                    first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
-                                    last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
-                                    record['first_name'] = first_name
-                                    record['last_name'] = last_name
-                                except Exception as e:
-                                    print('Name of Owner Guarantor Name: error'+str(e))
-                                    
-                            
-                            if 'Phone' in extracted_text:
-                                try:
-                                    text_region = thresh[y-60:y + h, x:x + w+80]
-                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                    cv2.rectangle(result, (x+80, y-60), (x+w, y+h), (0, 0, 255), 2)
-                                    if len(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',croped_text)) > 0:
-                                        tel.append(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',croped_text)[0])
-                                    
-                                except Exception as e:
-                                    print('Name of Owner Guarantor Name: error'+str(e)) 
-                            
-                            if 'Print Name' in extracted_text and first_name == '' and last_name == '':
-                                try:
-                                    text_region = thresh[y-50:y + h, x-60:x + w+40]
-                                    croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                    cv2.rectangle(result, (x-60, y-50), (x+w+40, y+h), (0, 0, 255), 2)
-                                    name = croped_text.replace('PrintName','').replace('Print Name','').replace('andTitle','').replace('and Title','').strip().replace('()','').replace('( )','')
-                                    first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
-                                    last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
-                                    record['first_name'] = first_name
-                                    record['last_name'] = last_name
-                                except Exception as e:
-                                    print('Name of Owner Guarantor Name: error'+str(e))    
                             
                             if 'Street Address' in extracted_text and business_address == '':
                                 try:
@@ -851,9 +869,9 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                 except Exception as e:
                                     print('City, State and Zip Code'+str(e))
                                     
-                            if len(re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*',extracted_text)) > 0 and (business_address == '' or business_address == ', ,'):
+                            if len(re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*|Address of Executive Offices:.*?City|Address of Executive Offices:.*',extracted_text)) > 0 and (business_address == '' or business_address == ', ,'):
                                 try:
-                                    business_address = re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*|Address:.*',extracted_text)[0].replace('Business Location Street Address:','').replace('Business Address:','').replace('Business street address:','').replace('city','').replace('Physical Address:','').replace('Home Address:','').replace('Address:.*','')
+                                    business_address = re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*|Address of Executive Offices:.*?City|Address of Executive Offices:.*',extracted_text)[0].replace('Address of Executive Offices:','').replace('Business Location Street Address:','').replace('Business Address:','').replace('Business street address:','').replace('City','').replace('city','').replace('Physical Address:','').replace('Home Address:','').replace('Address:.*','')
                                     if(len(re.findall('[a-zA-Z]+?:',business_address))>0):
                                         business_address = business_address.replace(re.findall('[a-zA-Z]+?:',business_address)[0],'')
                                     record['business_address'] = business_address.replace('SAME AS ABOVE','')
@@ -981,7 +999,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
         doc = fitz.open(os.getcwd().replace('scraping','')+'/' + pdf_path)
         page = doc.load_page(0)
         page_text = page.get_text("text")
-        [email.append(word) for word in page_text.split() if len(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net',word))>0]
+        [email.append(word) if 'accounting' not in word and 'admin' not in word and 'customer' not in word else '' for word in page_text.split() if len(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net',word))>0]
         doc.close()
     except Exception as e:
         print('email pdf error'+str(e))
@@ -1065,9 +1083,10 @@ def scrape_cron():
                             driver.find_element(By.XPATH,'//*[@id="selSortBy"]/option[text()="Case Type"]').click()
                             driver.find_element(By.CSS_SELECTOR,'caption input[type*="submit"]').click()
                             sleep(6)
-                        elements = driver.find_elements(By.CSS_SELECTOR, '#form > table.NewSearchResults > tbody > tr > td:nth-child(1) > a')
+                        elements = driver.find_elements(By.CSS_SELECTOR, '#form > table.NewSearchResults > tbody > tr')
                         for i,e in enumerate(elements):
-                            links.append(e.get_attribute('href'))
+                            if 'Commercial' in driver.find_element(By.CSS_SELECTOR,'td:nth-child(1) > a').get_attribute('innerHTML'):
+                                links.append(e.find_element(By.CSS_SELECTOR,'td:nth-child(4)').get_attribute('href'))
                                         
                         driver.switch_to.window(driver.window_handles[0])
                     except Exception as e:
