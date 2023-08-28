@@ -10,9 +10,6 @@ pytesseract
 airtable
 opencv-python
 psutil
-imutils
-uszipcode
-fitz
 frontend
 tools
 python-Levenshtein
