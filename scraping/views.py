@@ -33,6 +33,13 @@ import fitz
 
 logger = logging.getLogger(__name__)
 
+file_handler = logging.FileHandler('log.log')
+file_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(funcName)s - %(message)s')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
+
 api_key = 'e77cab79ca105a72b529f7b0026b7ee1'
 url = 'https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange'
 
@@ -163,6 +170,7 @@ def download_pdfs(link,records):
                     download_file(href)
                     sleep(5)
                 except Exception as e:
+                    logger.error(e, exc_info=True)
                     print(e)
                 sleep(5)
         elemntDriver.quit()
@@ -196,6 +204,7 @@ def extract_texts(folder,records):
                                     county = re.findall('FILED:[\s\S]*?COUNTY',info)[0].replace('FILED:','')
                                     record['county'] = county
                                 except Exception as e:
+                                    logger.error(f'business zip2 error: {e}', exc_info=True)
                                     print('business zip2 error'+str(e))
                             for number in re.findall('\$\d+,\d+\.\d+|\$\d+,\d+|\$\d+',info):
                                 number = number.replace('$','').replace(',','')
@@ -204,13 +213,19 @@ def extract_texts(folder,records):
                         price = max(numbers)
                         record['price'] = price
                 except Exception as e:
+                    logger.error(f'Complaint error: {e}', exc_info=True)
                     print('complaint error'+str(e))
+
+        msg = str(record['price']) if 'price' in record else 'less'
         print(record['price'] if 'price' in record else 'less')
+        logger.debug(msg)
         if 'price' in record and record['price'] >= 20000: 
             print(files)
+            logger.debug(files)
             for pdf_file in files:
                 try:
                     pdf_path = os.path.join(folder_path + '/' + folder, pdf_file)
+                    logger.debug(pdf_path)
                     print(pdf_path)
                     if 'summons' in pdf_file.lower() or 'petition' in pdf_file.lower():
                         try:
@@ -265,6 +280,7 @@ def extract_texts(folder,records):
                                                                 upper_x1 = x1
                                                                 upper_y1 = y1 +70
                                                 except Exception as e:
+                                                    logger.error(f'Error passed: {e}', exc_info=True)
                                                     pass
                                                                 
                                             
@@ -288,6 +304,7 @@ def extract_texts(folder,records):
                                                                     
                                                                     box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
                                                                     print(re.findall('[\s\S]*?Plaintiff' ,box_test))
+                                                                    logger.debug(str(re.findall('[\s\S]*?Plaintiff' ,box_test)))
                                                                     if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0):
                                                                         creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
                                                                     cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
@@ -316,6 +333,7 @@ def extract_texts(folder,records):
                                                     else:
                                                         pass
                                                 except Exception as e:
+                                                    logger.error(f'creadetor_name2 error: {e}', exc_info=True)
                                                     print('creadetor_name2 error'+str(e))
                                             cv2.imwrite(folder_path+ "/" + folder + '/' + "text_under_line.jpg", img)
                                         
@@ -330,7 +348,9 @@ def extract_texts(folder,records):
                                             record['company_suid'] = company_suid
                                     except Exception as err:
                                         print('page number '+str(i)+' '+str(err))
+                                        logger.error(f'Page numner {i}: {err}', exc_info=True)
                         except Exception as e:
+                            logger.error(f'credtor: {e}', exc_info=True)
                             print('error credtor '+ str(e))
 
                                 
@@ -341,13 +361,17 @@ def extract_texts(folder,records):
                             
                     
                 except Exception as e:
+                    logger.error(e, exc_info=True)
                     print('error 1'+str(e))
             print("="*100)
             print(record)
             print("="*100)
+            logger.debug(f'Record: {record}')
             records.append(record)
             at = airtable.Airtable('appho2OWyOBvn6PPU', 'patwsQ3w8O4VGC05S.01759369d41db17822bcf0074f5daf046cc68ef136677dd68a15550f0e843bef')
             print(record['email'] if 'email' in record else None)
+            msg = str(record['email']) if 'email' in record else None
+            logger.debug(msg)
             existing_lead = Lead.objects.filter(folder_id=record['folder'] if 'folder' in record else '').first()
 
             if existing_lead:
@@ -476,6 +500,7 @@ def scrape(request):
                 # Receive response
                 response = job.get_solution_response()
                 print("Received solution", response)
+                logger.debug(f'Anticaptcha response: {response}')
                 recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                 driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                 driver.execute_script("document.getElementById('captcha_form').submit();")
@@ -494,6 +519,7 @@ def scrape(request):
                             # Receive response
                             response = job.get_solution_response()
                             print("Received solution", response)
+                            logger.debug(f'Anticaptcha response: {response}')
                             recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                             driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                             driver.execute_script("document.getElementById('captcha_form').submit();")
@@ -526,6 +552,7 @@ def scrape(request):
                         # driver.close()
                         driver.switch_to.window(driver.window_handles[0])
                     except Exception as e:
+                        logger.error(e, exc_info=True)
                         print(e)
                 
                 # print(links)
@@ -541,6 +568,7 @@ def scrape(request):
                     for future in futures:
                         future.result()
             except Exception as e:
+                logger.error(e, exc_info=True)
                 print('-'*50)
                 print(e)
             finally:
@@ -553,10 +581,12 @@ def scrape(request):
                 html_template = loader.get_template('home/index.html')
                 return HttpResponse(html_template.render(context, request))
         except Exception as e:
+            logger.error(f'Passed error: {e}', exc_info=True)
             print('error2'+str(e))
             pass
         sleep(20)
     except Exception as e:
+        logger.error(e, exc_info=True)
         print('error3'+str(e))
         pass
     
@@ -700,6 +730,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                         email.append(foundEmail)
                                         cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
+                                    logger.error(f'Email error: {e}', exc_info=True)
                                     print('email error'+str(e))
                                 
                             if len(re.findall('Full Name:.*|Full Name;.*|Contact Name:.*|Contact Name;.*|Owner: Name:.*',extracted_text))> 0 and first_name == '' and last_name == '':
@@ -710,11 +741,13 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     if len(re.findall('Full Name:.*|Full Name;.*|Contact Name:.*|Contact Name;.*|Owner: Name:.*',croped_text))> 0:
                                         name = re.findall('Full Name:.*|Full Name;.*|Contact Name:.*|Contact Name;.*|Owner: Name:.*',croped_text)[0].replace('Full Name:','').replace('Full Name;','').replace('Contact Name:','').replace('Contact Name;','').replace('Owner: Name:','').strip()
                                         print(extracted_text)
+                                        logger.debug(extracted_text)
                                         first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
                                         last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
                                         record['first_name'] = first_name
                                         record['last_name'] = last_name
                                 except Exception as e:
+                                    logger.error(f'Full name error: {e}', exc_info=True)
                                     print('full name error'+str(e))
                                     
                             if len(re.findall('First Name:.*',extracted_text)) > 0 and first_name == '':
@@ -723,6 +756,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['first_name'] = first_name
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
+                                    logger.error(f'First name error: {e}', exc_info=True)
                                     print('first name error'+str(e))
                             
                             if len(re.findall('Last Name:.*',extracted_text)) > 0 and last_name == '':
@@ -731,6 +765,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['last_name'] = last_name
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
+                                    logger.error(f'Last name error: {e}', exc_info=True)
                                     print('last name error'+str(e))
                                 
                                 
@@ -746,6 +781,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                         record['first_name'] = first_name
                                         record['last_name'] = last_name
                                 except Exception as e:
+                                    logger.error(f'OWNER/GUARANTOR error: {e}', exc_info=True)
                                     print('OWNER/GUARANTOR #1 error'+str(e))
                             if 'GUARANTOR\'S INFORMATION' in extracted_text and first_name == '' and last_name == '':
                                 try:
@@ -759,6 +795,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                         record['first_name'] = first_name
                                         record['last_name'] = last_name
                                 except Exception as e:
+                                    logger.error(f'GUARANTOR\'S INFORMATION error: {e}', exc_info=True)
                                     print('GUARANTOR\'S INFORMATION error'+str(e))
                                     
                             if 'OWNER/GUARANTOR (#1)' in extracted_text and first_name == '' and last_name == '':
@@ -773,6 +810,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                         record['first_name'] = first_name
                                         record['last_name'] = last_name
                                 except Exception as e:
+                                    logger.error(f'OWNER/GUARANTOR  error: {e}', exc_info=True)
                                     print('OWNER/GUARANTOR (#1) error'+str(e))
                                     
                             if 'Name of Owner Guarantor 1:' in extracted_text and first_name == '' and last_name == '':
@@ -786,6 +824,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['first_name'] = first_name
                                     record['last_name'] = last_name
                                 except Exception as e:
+                                    logger.error(f'Name of Owner Guarantor error: {e}', exc_info=True)
                                     print('Name of Owner Guarantor 1: error'+str(e))
                             
 
@@ -800,6 +839,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['first_name'] = first_name
                                     record['last_name'] = last_name
                                 except Exception as e:
+                                    logger.error(f'Guarantor(s) Name error: {e}', exc_info=True)
                                     print('Guarantor(s) Name: error'+str(e))
                                     
                             
@@ -812,6 +852,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                         tel.append(re.findall('Cell Phone:[\s\S]*[0-9]{9,10}|[0-9]{2,3}-[0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\) [0-9]{2,3}-[0-9]{2,5}|\([0-9]{2,3}\)[0-9]{2,3}-[0-9]{2,5}',croped_text)[0])
                                     
                                 except Exception as e:
+                                    logger.error(f'Phone error: {e}', exc_info=True)
                                     print('Phone: error'+str(e)) 
                             
                             if 'Print Name' in extracted_text and first_name == '' and last_name == '':
@@ -825,6 +866,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['first_name'] = first_name
                                     record['last_name'] = last_name
                                 except Exception as e:
+                                    logger.error(f'Print Name: {e}', exc_info=True)
                                     print('Print Name: error'+str(e))    
                                     
                             if ('Printed Name:' in extracted_text or 'Print Name:' in extracted_text) and first_name == '' and last_name == '':
@@ -838,6 +880,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['first_name'] = first_name
                                     record['last_name'] = last_name
                                 except Exception as e:
+                                    logger.error(f'Printed Name: {e}', exc_info=True)
                                     print('Printed Name: error'+str(e))
                             
                             if 'Street Address' in extracted_text and business_address == '':
@@ -851,7 +894,9 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                         record['business_address'] = record['business_address'].split('\n')
                                         record['business_address'] = record['business_address'][1]
                                     print(record['business_address'])
+                                    logger.debug(record['business_address'])
                                 except Exception as e:
+                                    logger.error(f'Street Address error: {e}', exc_info=True)
                                     print('Street Address'+str(e))
                                     
                             if 'City, State and Zip Code' in extracted_text and business_zip == '' and business_state == '' and business_city == '':
@@ -867,6 +912,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['business_state'] = business_state
                                     record['business_zip'] = business_zip
                                 except Exception as e:
+                                    logger.error(f'City, State and Zip Code error: {e}', exc_info=True)
                                     print('City, State and Zip Code'+str(e))
                                     
                             if len(re.findall('Business Address:.*?:|Business street address:.*|Business Location Street Address:.*?city|Physical Address:.*|Home Address:.*|Address of Executive Offices:.*?City|Address of Executive Offices:.*',extracted_text)) > 0 and (business_address == '' or business_address == ', ,'):
@@ -877,6 +923,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['business_address'] = business_address.replace('SAME AS ABOVE','')
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
+                                    logger.error(f'Business address error: {e}', exc_info=True)
                                     print('business address error'+str(e))
                                     
                                     
@@ -888,6 +935,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                         record['business_state'] = city_state[1]
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
+                                    logger.error(f'city/state error: {e}', exc_info=True)
                                     print('city/state error'+str(e)) 
                                     
                                     
@@ -909,6 +957,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['business_state'] = business_state
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
+                                    logger.error(f'business state error: {e}', exc_info=True)
                                     print('business state error'+str(e))
                                     
                             if len(re.findall('Zip:.*?:|Business zip:.*|Zip:.*',extracted_text)) > 0 and business_zip == '':
@@ -919,15 +968,18 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     record['business_zip'] = business_zip
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
+                                    logger.error(f'business zip error: {e}', exc_info=True)
                                     print('business zip error'+str(e))
                                     
                             if len(re.findall('[0-9]{2}/[0-9]{2}/[0-9]{4}',extracted_text)) > 0 and date == '' and ('NYSCEF' in extracted_text or 'CLERK' in extracted_text) and 'date' not in record:
                                 try:
                                     date = re.findall('[0-9]{2}/[0-9]{2}/[0-9]{4}',extracted_text)[0]
                                     print(extracted_text)
+                                    logger.debug(extract_text)
                                     record['date'] = date
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
+                                    logger.error(f'date error: {e}', exc_info=True)
                                     print('date error'+str(e))
                                     
                             if(len(re.findall('FILED:[\s\S]*?COUNTY',extracted_text))>0) and county == '':
@@ -935,6 +987,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     county = re.findall('FILED:[\s\S]*?COUNTY',extracted_text)[0].replace('FILED:','')
                                     record['county'] = county
                                 except Exception as e:
+                                    logger.error(f'business zip2 error: {e}', exc_info=True)
                                     print('business zip2 error'+str(e))
                                 
                                 
@@ -942,6 +995,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                     cv2.imwrite(folder_path + "/" + folder + '/'  +pdf_file+str(i)+".jpg", result)            
                     
                 except Exception as e:
+                    logger.error(f'error in text_info: {e}', exc_info=True)
                     print('error in text_info'+str(e))
                     
                     
@@ -952,6 +1006,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                             business_zip = re.findall('\d+',business_zip)[0]
                         record['business_zip'] = business_zip
                     except Exception as e:
+                        logger.error(f'business zip2 error: {e}', exc_info=True)
                         print('business zip2 error'+str(e))
                         
                     
@@ -962,6 +1017,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                             business_city = business_city.replace(re.findall(',.*\d*',business_city)[0],'')
                         record['business_city'] = business_city
                     except Exception as e:
+                        logger.error(f'business city2 error: {e}', exc_info=True)
                         print('business city2 error'+str(e))
                     
                 if(len(re.findall(' [a-zA-Z]+?,.*?\d*\\nSignature City, State and Zip Code',text))>0) and business_state == '':
@@ -973,8 +1029,10 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                             business_state = business_state.replace(re.findall('\d+',business_state)[0],'')
                         record['business_state'] = business_state
                     except Exception as e:
+                        logger.error(f'business state2 error: {e}', exc_info=True)
                         print('business state2 error'+str(e))
     except Exception as e:
+        logger.error(f'error in text: {e}', exc_info=True)
         print('error in text'+str(e))
         
     if(',' not in business_address and business_address != ''):
@@ -985,6 +1043,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
     if(len(re.findall('\n',record['business_address']))>0):
         record['business_address'] = record['business_address'].split('\n')
         record['business_address'] = record['business_address'][1]
+    logger.debug(record['business_address'])
     print(record['business_address'])
     print('========================================================================')
     print('========================================================================')
@@ -996,15 +1055,18 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
         
     try:
         print(os.getcwd().replace('scraping','')+'/' + pdf_path)
+        logger.debug(f'{os.getcwd().replace('scraping','')}/{pdf_path}')
         doc = fitz.open(os.getcwd().replace('scraping','')+'/' + pdf_path)
         page = doc.load_page(0)
         page_text = page.get_text("text")
         [email.append(word) if 'accounting' not in word and 'admin' not in word and 'customer' not in word else '' for word in page_text.split() if len(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net',word))>0]
         doc.close()
     except Exception as e:
+        logger.error(f'bemail pdf error: {e}', exc_info=True)
         print('email pdf error'+str(e))
         
     print(email)
+    logger.debug(email)
     
     if 'email' not in record and len(email)>1:
         record['email'] = email[len(email)-1].strip()
@@ -1052,6 +1114,7 @@ def scrape_cron():
                 # Receive response
                 response = job.get_solution_response()
                 print("Received solution", response)
+                logger.debug(f'Anticaptcha response: {response}')
                 recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                 driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                 driver.execute_script("document.getElementById('captcha_form').submit();")
@@ -1070,6 +1133,7 @@ def scrape_cron():
                             # Receive response
                             response = job.get_solution_response()
                             print("Received solution", response)
+                            logger.debug(f'Anticaptcha response: {response}')
                             recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                             driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                             driver.execute_script("document.getElementById('captcha_form').submit();")
@@ -1090,6 +1154,7 @@ def scrape_cron():
                                         
                         driver.switch_to.window(driver.window_handles[0])
                     except Exception as e:
+                        logger.error(e, exc_info=True)
                         print(e)
                 
                 with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
@@ -1097,6 +1162,7 @@ def scrape_cron():
                     for future in futures:
                         future.result()
             except Exception as e:
+                logger.error(e, exc_info=True)
                 print('-'*50)
                 print(e)
             finally:
@@ -1108,12 +1174,14 @@ def scrape_cron():
                         proc.kill()
                            
         except Exception as e:
+            logger.error(e, exc_info=True)
             print('error2'+str(e))
             pass
         cron_job.status = "success"
         cron_job.log = 'run success'
         cron_job.save()
     except Exception as e:
+        logger.error(e, exc_info=True)
         print('error3'+str(e))
         cron_job.status = "error" 
         cron_job.log = str(e)
