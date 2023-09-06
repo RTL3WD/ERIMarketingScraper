@@ -735,9 +735,10 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                 
                             if len(re.findall('Full Name:.*|Full Name;.*|Contact Name:.*|Contact Name;.*|Owner: Name:.*',extracted_text))> 0 and first_name == '' and last_name == '':
                                 try:
-                                    text_region = thresh[y+15:y + h, x:x + w]
+                                    text_region = thresh[y-35:y + h, x:x + w]
                                     croped_text = pytesseract.image_to_string(text_region, config=custom_config).strip()
-                                    cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                    cv2.rectangle(result, (x, y-35), (x+w, y+h), (0, 0, 255), 2)
+                                    print(croped_text)
                                     if len(re.findall('Full Name:.*|Full Name;.*|Contact Name:.*|Contact Name;.*|Owner: Name:.*',croped_text))> 0:
                                         name = re.findall('Full Name:.*|Full Name;.*|Contact Name:.*|Contact Name;.*|Owner: Name:.*',croped_text)[0].replace('Full Name:','').replace('Full Name;','').replace('Contact Name:','').replace('Contact Name;','').replace('Owner: Name:','').strip()
                                         print(extracted_text)
