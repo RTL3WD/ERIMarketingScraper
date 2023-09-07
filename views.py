@@ -27,9 +27,8 @@ import numpy as np
 import psutil
 import logging
 import concurrent.futures
-from .models import Lead, CronJobs
+# from .models import Lead, CronJobs
 from urllib.parse import unquote
-import fitz
 
 
 logging.basicConfig(
@@ -1086,13 +1085,13 @@ def run_cron(request):
                     
 def scrape_cron():
     print('starting scrape cron')
-    cron_job = CronJobs(status="started", log='run started')
-    cron_job.save()
+    # cron_job = CronJobs(status="started", log='run started')
+    # cron_job.save()
     try:
         optionsUC = webdriver.ChromeOptions()
         optionsUC.add_argument('--window-size=360,640')
         optionsUC.add_argument('--no-sandbox')
-        optionsUC.add_argument('--headless')
+        # optionsUC.add_argument('--headless')
         optionsUC.add_argument('start-maximized')
         count_types = ['Kings County Supreme Court', 'Monroe County Supreme Court', 'Washington County Supreme Court', 'Ontario County Supreme Court']
         try:
@@ -1152,8 +1151,15 @@ def scrape_cron():
                             sleep(6)
                         elements = driver.find_elements(By.CSS_SELECTOR, '#form > table.NewSearchResults > tbody > tr')
                         for i,e in enumerate(elements):
-                            if 'Commercial' in driver.find_element(By.XPATH,'//td[4]').get_attribute('innerHTML'):
-                                links.append(e.find_element(By.CSS_SELECTOR,'td:nth-child(4)').get_attribute('href'))
+                            while True:
+                                locator = input('>> ')
+                                try:
+                                    e = driver.find_element(By.XPATH,locator).get_attribute('innerHTML')
+                                    if 'Commercial' in driver.find_element(By.XPATH,locator).get_attribute('innerHTML'):
+                                        links.append(e.find_element(By.CSS_SELECTOR,'td:nth-child(4)').get_attribute('href'))
+                                except Exception as e:
+                                    print(e)
+                                    pass
                                         
                         driver.switch_to.window(driver.window_handles[0])
                     except Exception as e:
@@ -1182,14 +1188,16 @@ def scrape_cron():
             logger.error(e, exc_info=True)
             print('error2'+str(e))
             pass
-        cron_job.status = "success"
-        cron_job.log = 'run success'
-        cron_job.save()
+        # cron_job.status = "success"
+        # cron_job.log = 'run success'
+        # cron_job.save()
         logger.info('Cron job saved')
     except Exception as e:
         logger.error(e, exc_info=True)
         print('error3'+str(e))
-        cron_job.status = "error" 
-        cron_job.log = str(e)
-        cron_job.save()
+        # cron_job.status = "error" 
+        # cron_job.log = str(e)
+        # cron_job.save()
         pass
+
+scrape_cron()

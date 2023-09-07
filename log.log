@@ -1,0 +1,66 @@
+2023-09-06 18:52:45,068 INFO scrape_cron - Anticaptcha response received
+2023-09-06 18:52:46,201 INFO scrape_cron - Processing Kings County Supreme Court
+2023-09-06 18:55:15,358 ERROR scrape_cron - Message: no such element: Unable to locate element: {"method":"xpath","selector":"//td[4]/a"}
+  (Session info: headless chrome=116.0.5845.179); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+Stacktrace:
+0   chromedriver                        0x000000010f5d2638 chromedriver + 5002808
+1   chromedriver                        0x000000010f5c9a53 chromedriver + 4966995
+2   chromedriver                        0x000000010f17aa57 chromedriver + 449111
+3   chromedriver                        0x000000010f1c0d05 chromedriver + 736517
+4   chromedriver                        0x000000010f1c0ec1 chromedriver + 736961
+5   chromedriver                        0x000000010f204f04 chromedriver + 1015556
+6   chromedriver                        0x000000010f1e741d chromedriver + 893981
+7   chromedriver                        0x000000010f202391 chromedriver + 1004433
+8   chromedriver                        0x000000010f1e71c3 chromedriver + 893379
+9   chromedriver                        0x000000010f1b2df9 chromedriver + 679417
+10  chromedriver                        0x000000010f1b3fde chromedriver + 683998
+11  chromedriver                        0x000000010f58f2d9 chromedriver + 4727513
+12  chromedriver                        0x000000010f5942de chromedriver + 4747998
+13  chromedriver                        0x000000010f5522c9 chromedriver + 4477641
+14  chromedriver                        0x000000010f59502d chromedriver + 4751405
+15  chromedriver                        0x000000010f5680ec chromedriver + 4567276
+16  chromedriver                        0x000000010f5b27f8 chromedriver + 4872184
+17  chromedriver                        0x000000010f5b29b7 chromedriver + 4872631
+18  chromedriver                        0x000000010f5c2a1f chromedriver + 4938271
+19  libsystem_pthread.dylib             0x00007ff811f5c1d3 _pthread_start + 125
+20  libsystem_pthread.dylib             0x00007ff811f57bd3 thread_start + 15
+Traceback (most recent call last):
+  File "/Users/i/repository/eri_marketing/client/Scraper/views.py", line 1154, in scrape_cron
+    if 'Commercial' in driver.find_element(By.XPATH,'//td[4]/a').get_attribute('innerHTML'):
+  File "/Users/i/repository/eri_marketing/client/Scraper/venv/lib/python3.10/site-packages/selenium/webdriver/remote/webdriver.py", line 738, in find_element
+    return self.execute(Command.FIND_ELEMENT, {"using": by, "value": value})["value"]
+  File "/Users/i/repository/eri_marketing/client/Scraper/venv/lib/python3.10/site-packages/selenium/webdriver/remote/webdriver.py", line 344, in execute
+    self.error_handler.check_response(response)
+  File "/Users/i/repository/eri_marketing/client/Scraper/venv/lib/python3.10/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.NoSuchElementException: Message: no such element: Unable to locate element: {"method":"xpath","selector":"//td[4]/a"}
+  (Session info: headless chrome=116.0.5845.179); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+Stacktrace:
+0   chromedriver                        0x000000010f5d2638 chromedriver + 5002808
+1   chromedriver                        0x000000010f5c9a53 chromedriver + 4966995
+2   chromedriver                        0x000000010f17aa57 chromedriver + 449111
+3   chromedriver                        0x000000010f1c0d05 chromedriver + 736517
+4   chromedriver                        0x000000010f1c0ec1 chromedriver + 736961
+5   chromedriver                        0x000000010f204f04 chromedriver + 1015556
+6   chromedriver                        0x000000010f1e741d chromedriver + 893981
+7   chromedriver                        0x000000010f202391 chromedriver + 1004433
+8   chromedriver                        0x000000010f1e71c3 chromedriver + 893379
+9   chromedriver                        0x000000010f1b2df9 chromedriver + 679417
+10  chromedriver                        0x000000010f1b3fde chromedriver + 683998
+11  chromedriver                        0x000000010f58f2d9 chromedriver + 4727513
+12  chromedriver                        0x000000010f5942de chromedriver + 4747998
+13  chromedriver                        0x000000010f5522c9 chromedriver + 4477641
+14  chromedriver                        0x000000010f59502d chromedriver + 4751405
+15  chromedriver                        0x000000010f5680ec chromedriver + 4567276
+16  chromedriver                        0x000000010f5b27f8 chromedriver + 4872184
+17  chromedriver                        0x000000010f5b29b7 chromedriver + 4872631
+18  chromedriver                        0x000000010f5c2a1f chromedriver + 4938271
+19  libsystem_pthread.dylib             0x00007ff811f5c1d3 _pthread_start + 125
+20  libsystem_pthread.dylib             0x00007ff811f57bd3 thread_start + 15
+
+2023-09-06 18:55:42,382 INFO scrape_cron - Anticaptcha response received
+2023-09-06 18:55:43,784 INFO scrape_cron - Processing Kings County Supreme Court
+2023-09-06 19:00:32,477 INFO scrape_cron - Anticaptcha response received
+2023-09-06 19:00:34,163 INFO scrape_cron - Processing Kings County Supreme Court
+2023-09-06 19:01:24,982 INFO scrape_cron - Anticaptcha response received
+2023-09-06 19:01:26,466 INFO scrape_cron - Processing Kings County Supreme Court
