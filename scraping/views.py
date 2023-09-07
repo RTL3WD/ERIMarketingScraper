@@ -34,7 +34,7 @@ import fitz
 
 logging.basicConfig(
     filename='log.log',
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s %(levelname)s %(funcName)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -218,14 +218,14 @@ def extract_texts(folder,records):
 
         msg = str(record['price']) if 'price' in record else 'less'
         print(record['price'] if 'price' in record else 'less')
-        logger.debug(msg)
+        logger.info(msg)
         if 'price' in record and record['price'] >= 20000: 
             print(files)
-            logger.debug(files)
+            logger.info(files)
             for pdf_file in files:
                 try:
                     pdf_path = os.path.join(folder_path + '/' + folder, pdf_file)
-                    logger.debug(pdf_path)
+                    logger.info(pdf_path)
                     print(pdf_path)
                     if 'summons' in pdf_file.lower() or 'petition' in pdf_file.lower():
                         try:
@@ -304,7 +304,7 @@ def extract_texts(folder,records):
                                                                     
                                                                     box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
                                                                     print(re.findall('[\s\S]*?Plaintiff' ,box_test))
-                                                                    logger.debug(str(re.findall('[\s\S]*?Plaintiff' ,box_test)))
+                                                                    logger.info(str(re.findall('[\s\S]*?Plaintiff' ,box_test)))
                                                                     if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0):
                                                                         creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
                                                                     cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
@@ -366,12 +366,12 @@ def extract_texts(folder,records):
             print("="*100)
             print(record)
             print("="*100)
-            logger.debug(f'Record: {record}')
+            logger.info(f'Record: {record}')
             records.append(record)
             at = airtable.Airtable('appho2OWyOBvn6PPU', 'patwsQ3w8O4VGC05S.01759369d41db17822bcf0074f5daf046cc68ef136677dd68a15550f0e843bef')
             print(record['email'] if 'email' in record else None)
             msg = str(record['email']) if 'email' in record else None
-            logger.debug(msg)
+            logger.info(msg)
             existing_lead = Lead.objects.filter(folder_id=record['folder'] if 'folder' in record else '').first()
 
             if existing_lead:
@@ -500,7 +500,7 @@ def scrape(request):
                 # Receive response
                 response = job.get_solution_response()
                 print("Received solution", response)
-                logger.debug(f'Anticaptcha response: {response}')
+                logger.info(f'Anticaptcha response: {response}')
                 recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                 driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                 driver.execute_script("document.getElementById('captcha_form').submit();")
@@ -519,7 +519,7 @@ def scrape(request):
                             # Receive response
                             response = job.get_solution_response()
                             print("Received solution", response)
-                            logger.debug(f'Anticaptcha response: {response}')
+                            logger.info(f'Anticaptcha response: {response}')
                             recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                             driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                             driver.execute_script("document.getElementById('captcha_form').submit();")
@@ -579,7 +579,7 @@ def scrape(request):
                         proc.kill()
                 context['records'] = records
                 html_template = loader.get_template('home/index.html')
-                logger.debug('Returning HTML template')
+                logger.info('Returning HTML template')
                 return HttpResponse(html_template.render(context, request))
         except Exception as e:
             logger.error(f'Passed error: {e}', exc_info=True)
@@ -743,7 +743,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                     if len(re.findall('Full Name:.*|Full Name;.*|Contact Name:.*|Contact Name;.*|Owner: Name:.*',croped_text))> 0:
                                         name = re.findall('Full Name:.*|Full Name;.*|Contact Name:.*|Contact Name;.*|Owner: Name:.*',croped_text)[0].replace('Full Name:','').replace('Full Name;','').replace('Contact Name:','').replace('Contact Name;','').replace('Owner: Name:','').strip()
                                         print(extracted_text)
-                                        logger.debug(extracted_text)
+                                        logger.info(extracted_text)
                                         first_name = name.split(' ')[0] if len(name.split(' ')) > 0 else ''
                                         last_name = (name.split(' ')[1] if len(name.split(' ')) > 1 else '')+(name.split(' ')[2] if len(name.split(' ')) > 2 else '')
                                         record['first_name'] = first_name
@@ -896,7 +896,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                         record['business_address'] = record['business_address'].split('\n')
                                         record['business_address'] = record['business_address'][1]
                                     print(record['business_address'])
-                                    logger.debug(record['business_address'])
+                                    logger.info(record['business_address'])
                                 except Exception as e:
                                     logger.error(f'Street Address error: {e}', exc_info=True)
                                     print('Street Address'+str(e))
@@ -977,7 +977,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                 try:
                                     date = re.findall('[0-9]{2}/[0-9]{2}/[0-9]{4}',extracted_text)[0]
                                     print(extracted_text)
-                                    logger.debug(extract_text)
+                                    logger.info(extract_text)
                                     record['date'] = date
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
@@ -1045,7 +1045,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
     if(len(re.findall('\n',record['business_address']))>0):
         record['business_address'] = record['business_address'].split('\n')
         record['business_address'] = record['business_address'][1]
-    logger.debug(record['business_address'])
+    logger.info(record['business_address'])
     print(record['business_address'])
     print('========================================================================')
     print('========================================================================')
@@ -1057,7 +1057,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
         
     try:
         print(os.getcwd().replace('scraping','')+'/' + pdf_path)
-        logger.debug(f"{os.getcwd().replace('scraping','')}/{pdf_path}")
+        logger.info(f"{os.getcwd().replace('scraping','')}/{pdf_path}")
         doc = fitz.open(os.getcwd().replace('scraping','')+'/' + pdf_path)
         page = doc.load_page(0)
         page_text = page.get_text("text")
@@ -1068,7 +1068,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
         print('email pdf error'+str(e))
         
     print(email)
-    logger.debug(email)
+    logger.info(email)
     
     if 'email' not in record and len(email)>1:
         record['email'] = email[len(email)-1].strip()
@@ -1116,13 +1116,13 @@ def scrape_cron():
                 # Receive response
                 response = job.get_solution_response()
                 print("Received solution", response)
-                logger.debug(f'Anticaptcha response: {response}')
+                logger.info(f'Anticaptcha response: {response}')
                 recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                 driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                 driver.execute_script("document.getElementById('captcha_form').submit();")
                 links = []
                 for count_type in count_types:
-                    logger.debug(f'Processing {count_type}')
+                    logger.info(f'Processing {count_type}')
                     try:
                         driver.get('https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange')
                         sleep(5)
@@ -1136,7 +1136,7 @@ def scrape_cron():
                             # Receive response
                             response = job.get_solution_response()
                             print("Received solution", response)
-                            logger.debug(f'Anticaptcha response: {response}')
+                            logger.info(f'Anticaptcha response: {response}')
                             recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                             driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                             driver.execute_script("document.getElementById('captcha_form').submit();")
@@ -1164,7 +1164,7 @@ def scrape_cron():
                     futures = [executor.submit(download_pdfs, link, records) for link in links]
                     for future in futures:
                         result = future.result()
-                        logger.debug(result)
+                        logger.info(result)
             except Exception as e:
                 logger.error(e, exc_info=True)
                 print('-'*50)
