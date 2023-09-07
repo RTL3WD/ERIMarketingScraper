@@ -142,6 +142,7 @@ def download_pdfs(link,records):
     optionsUC.add_argument('--window-size=360,640')
     optionsUC.add_argument('--no-sandbox')
     optionsUC.add_argument('--headless')
+    optionsUC.add_argument('--disable-dev-shm-usage')
     optionsUC.add_argument('start-maximized')
     elemntDriver = webdriver.Chrome(options=optionsUC)
     elemntDriver.get(link)
