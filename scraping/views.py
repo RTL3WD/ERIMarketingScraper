@@ -471,7 +471,7 @@ def extract_folder(request, folder):
     
                          
 def scrape(request):
-    print('start')
+    print('starting scrape function')
     try:
         optionsUC = webdriver.ChromeOptions()
         optionsUC.add_argument('--window-size=360,640')
@@ -579,6 +579,7 @@ def scrape(request):
                         proc.kill()
                 context['records'] = records
                 html_template = loader.get_template('home/index.html')
+                logger.debug('Returning HTML template')
                 return HttpResponse(html_template.render(context, request))
         except Exception as e:
             logger.error(f'Passed error: {e}', exc_info=True)
