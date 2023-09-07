@@ -31,13 +31,13 @@ from .models import Lead, CronJobs
 from urllib.parse import unquote
 import fitz
 
-logger = logging.getLogger(__name__)
 
-file_handler = logging.FileHandler('log.log')
-file_handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s %(levelname)s %(funcName)s - %(message)s')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
+logging.basicConfig(
+    filename='log.log',
+    level=logging.DEBUG,
+    format='%(asctime)s %(levelname)s %(funcName)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 api_key = 'e77cab79ca105a72b529f7b0026b7ee1'
@@ -1085,7 +1085,7 @@ def run_cron(request):
             
                     
 def scrape_cron():
-    print('start')
+    print('starting scrape cron')
     cron_job = CronJobs(status="started", log='run started')
     cron_job.save()
     try:
@@ -1122,6 +1122,7 @@ def scrape_cron():
                 driver.execute_script("document.getElementById('captcha_form').submit();")
                 links = []
                 for count_type in count_types:
+                    logger.debug(f'Processing {count_type}')
                     try:
                         driver.get('https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange')
                         sleep(5)
@@ -1162,7 +1163,8 @@ def scrape_cron():
                 with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                     futures = [executor.submit(download_pdfs, link, records) for link in links]
                     for future in futures:
-                        future.result()
+                        result = future.result()
+                        logger.debug(result)
             except Exception as e:
                 logger.error(e, exc_info=True)
                 print('-'*50)
