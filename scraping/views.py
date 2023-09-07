@@ -1152,7 +1152,7 @@ def scrape_cron():
                             sleep(6)
                         elements = driver.find_elements(By.CSS_SELECTOR, '#form > table.NewSearchResults > tbody > tr')
                         for i,e in enumerate(elements):
-                            if 'Commercial' in driver.find_element(By.CSS_SELECTOR,'td:nth-child(1) > a').get_attribute('innerHTML'):
+                            if 'Commercial' in driver.find_element(By.CSS_SELECTOR,'td:nth-child(4) > a').get_attribute('innerHTML'):
                                 links.append(e.find_element(By.CSS_SELECTOR,'td:nth-child(4)').get_attribute('href'))
                                         
                         driver.switch_to.window(driver.window_handles[0])
