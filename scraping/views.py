@@ -1056,7 +1056,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
         
     try:
         print(os.getcwd().replace('scraping','')+'/' + pdf_path)
-        logger.debug(f'{os.getcwd().replace('scraping','')}/{pdf_path}')
+        logger.debug(f"{os.getcwd().replace('scraping','')}/{pdf_path}")
         doc = fitz.open(os.getcwd().replace('scraping','')+'/' + pdf_path)
         page = doc.load_page(0)
         page_text = page.get_text("text")
