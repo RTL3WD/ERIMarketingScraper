@@ -1161,6 +1161,7 @@ def scrape_cron():
                         logger.error(e, exc_info=True)
                         print(e)
                 
+                driver.quit()
                 logger.info(f'Submitting {len(links)} to threadpool')
                 with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                     futures = [executor.submit(download_pdfs, link, records) for link in links]
@@ -1172,7 +1173,7 @@ def scrape_cron():
                 print('-'*50)
                 print(e)
             finally:
-                driver.quit()
+                # driver.quit()
                 PROCNAME = "chromedriver" # or chromedriver or IEDriverServer
                 for proc in psutil.process_iter():
                     # check whether the process name matches
