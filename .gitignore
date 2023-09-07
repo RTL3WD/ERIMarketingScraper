@@ -6,3 +6,5 @@
 /__pycache__/
 /scraping/migrations/__pycache__
 /scraping/static
+
+log.log
