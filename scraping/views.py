@@ -500,7 +500,7 @@ def scrape(request):
                 # Receive response
                 response = job.get_solution_response()
                 print("Received solution", response)
-                logger.info(f'Anticaptcha response: {response}')
+                logger.info(f'Anticaptcha response received')
                 recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                 driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                 driver.execute_script("document.getElementById('captcha_form').submit();")
@@ -519,7 +519,7 @@ def scrape(request):
                             # Receive response
                             response = job.get_solution_response()
                             print("Received solution", response)
-                            logger.info(f'Anticaptcha response: {response}')
+                            logger.info(f'Anticaptcha response received')
                             recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                             driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                             driver.execute_script("document.getElementById('captcha_form').submit();")
@@ -1116,7 +1116,7 @@ def scrape_cron():
                 # Receive response
                 response = job.get_solution_response()
                 print("Received solution", response)
-                logger.info(f'Anticaptcha response: {response}')
+                logger.info(f'Anticaptcha response received')
                 recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                 driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                 driver.execute_script("document.getElementById('captcha_form').submit();")
@@ -1136,7 +1136,7 @@ def scrape_cron():
                             # Receive response
                             response = job.get_solution_response()
                             print("Received solution", response)
-                            logger.info(f'Anticaptcha response: {response}')
+                            logger.info(f'Anticaptcha response received')
                             recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                             driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
                             driver.execute_script("document.getElementById('captcha_form').submit();")
@@ -1160,6 +1160,7 @@ def scrape_cron():
                         logger.error(e, exc_info=True)
                         print(e)
                 
+                logger.info(f'Submitting {len(links)} to threadpool')
                 with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                     futures = [executor.submit(download_pdfs, link, records) for link in links]
                     for future in futures:
@@ -1184,6 +1185,7 @@ def scrape_cron():
         cron_job.status = "success"
         cron_job.log = 'run success'
         cron_job.save()
+        logger.info('Cron job saved')
     except Exception as e:
         logger.error(e, exc_info=True)
         print('error3'+str(e))
