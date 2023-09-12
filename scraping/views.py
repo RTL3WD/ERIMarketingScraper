@@ -484,7 +484,9 @@ def scrape(request):
             current_date = datetime.utcnow()
             one_day = timedelta(days=0)
             previous_date = (current_date - one_day).strftime('%m/%d/%Y')
+            print('Getting driver')
             driver =  webdriver.Chrome(options=optionsUC)
+            print('Driver success')
             context = {'segment': 'index'}
             records = []
             try:
