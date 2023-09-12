@@ -64,3 +64,117 @@ Stacktrace:
 2023-09-06 19:00:34,163 INFO scrape_cron - Processing Kings County Supreme Court
 2023-09-06 19:01:24,982 INFO scrape_cron - Anticaptcha response received
 2023-09-06 19:01:26,466 INFO scrape_cron - Processing Kings County Supreme Court
+2023-09-12 10:51:12,100 INFO scrape_cron - Anticaptcha response received
+2023-09-12 10:51:13,532 INFO scrape_cron - Processing Kings County Supreme Court
+2023-09-12 10:55:34,795 INFO scrape_cron - Anticaptcha response received
+2023-09-12 10:55:36,490 INFO scrape_cron - Processing Kings County Supreme Court
+2023-09-12 10:59:06,109 INFO scrape_cron - Anticaptcha response received
+2023-09-12 10:59:07,533 INFO scrape_cron - Processing Kings County Supreme Court
+2023-09-12 11:01:50,855 INFO scrape_cron - Anticaptcha response received
+2023-09-12 11:01:52,188 INFO scrape_cron - Processing Kings County Supreme Court
+2023-09-12 11:09:19,649 INFO scrape_cron - Anticaptcha response received
+2023-09-12 11:09:20,989 INFO scrape_cron - Processing Kings County Supreme Court
+2023-09-12 11:09:45,336 ERROR scrape_cron - 'str' object is not callable
+Traceback (most recent call last):
+  File "/Users/i/repository/eri_marketing/client/Scraper/views.py", line 1155, in scrape_cron
+    if 'Commercial' in e.text():
+TypeError: 'str' object is not callable
+2023-09-12 11:09:45,338 INFO scrape_cron - Processing Monroe County Supreme Court
+2023-09-12 11:10:08,960 ERROR scrape_cron - 'str' object is not callable
+Traceback (most recent call last):
+  File "/Users/i/repository/eri_marketing/client/Scraper/views.py", line 1155, in scrape_cron
+    if 'Commercial' in e.text():
+TypeError: 'str' object is not callable
+2023-09-12 11:10:08,961 INFO scrape_cron - Processing Washington County Supreme Court
+2023-09-12 11:10:29,787 ERROR scrape_cron - 'str' object is not callable
+Traceback (most recent call last):
+  File "/Users/i/repository/eri_marketing/client/Scraper/views.py", line 1155, in scrape_cron
+    if 'Commercial' in e.text():
+TypeError: 'str' object is not callable
+2023-09-12 11:10:29,787 INFO scrape_cron - Processing Ontario County Supreme Court
+2023-09-12 11:10:50,511 ERROR scrape_cron - 'str' object is not callable
+Traceback (most recent call last):
+  File "/Users/i/repository/eri_marketing/client/Scraper/views.py", line 1155, in scrape_cron
+    if 'Commercial' in e.text():
+TypeError: 'str' object is not callable
+2023-09-12 11:10:50,512 INFO scrape_cron - Submitting 0 to threadpool
+2023-09-12 11:10:50,728 INFO scrape_cron - Cron job saved
+2023-09-12 11:13:15,228 INFO scrape_cron - Anticaptcha response received
+2023-09-12 11:13:16,717 INFO scrape_cron - Processing Kings County Supreme Court
+2023-09-12 11:23:44,726 INFO scrape_cron - Anticaptcha response received
+2023-09-12 11:23:45,361 INFO scrape_cron - Processing Kings County Supreme Court
+2023-09-12 11:23:52,276 INFO scrape_cron - Anticaptcha response received
+2023-09-12 11:24:59,248 INFO scrape_cron - Anticaptcha response received
+2023-09-12 11:25:00,767 INFO scrape_cron - Processing Kings County Supreme Court
+2023-09-12 11:26:15,930 INFO scrape_cron - Anticaptcha response received
+2023-09-12 11:26:16,555 INFO scrape_cron - Processing Kings County Supreme Court
+2023-09-12 11:27:53,533 INFO scrape_cron - Anticaptcha response received
+2023-09-12 11:30:23,966 INFO scrape_cron - Processing Monroe County Supreme Court
+2023-09-12 11:30:49,192 INFO scrape_cron - Processing Washington County Supreme Court
+2023-09-12 11:31:10,014 INFO scrape_cron - Processing Ontario County Supreme Court
+2023-09-12 11:31:31,274 ERROR scrape_cron - Message: no such element: Unable to locate element: {"method":"tag name","selector":"a"}
+  (Session info: chrome=116.0.5845.179); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+Stacktrace:
+0   chromedriver                        0x000000010e27f638 chromedriver + 5002808
+1   chromedriver                        0x000000010e276a53 chromedriver + 4966995
+2   chromedriver                        0x000000010de27a57 chromedriver + 449111
+3   chromedriver                        0x000000010de6dd05 chromedriver + 736517
+4   chromedriver                        0x000000010de6dec1 chromedriver + 736961
+5   chromedriver                        0x000000010de619f6 chromedriver + 686582
+6   chromedriver                        0x000000010de9441d chromedriver + 893981
+7   chromedriver                        0x000000010de618b8 chromedriver + 686264
+8   chromedriver                        0x000000010de945ae chromedriver + 894382
+9   chromedriver                        0x000000010deaf391 chromedriver + 1004433
+10  chromedriver                        0x000000010de941c3 chromedriver + 893379
+11  chromedriver                        0x000000010de5fdf9 chromedriver + 679417
+12  chromedriver                        0x000000010de60fde chromedriver + 683998
+13  chromedriver                        0x000000010e23c2d9 chromedriver + 4727513
+14  chromedriver                        0x000000010e2412de chromedriver + 4747998
+15  chromedriver                        0x000000010e1ff2c9 chromedriver + 4477641
+16  chromedriver                        0x000000010e24202d chromedriver + 4751405
+17  chromedriver                        0x000000010e2150ec chromedriver + 4567276
+18  chromedriver                        0x000000010e25f7f8 chromedriver + 4872184
+19  chromedriver                        0x000000010e25f9b7 chromedriver + 4872631
+20  chromedriver                        0x000000010e26fa1f chromedriver + 4938271
+21  libsystem_pthread.dylib             0x00007ff811f5c1d3 _pthread_start + 125
+22  libsystem_pthread.dylib             0x00007ff811f57bd3 thread_start + 15
+Traceback (most recent call last):
+  File "/Users/i/repository/eri_marketing/client/Scraper/views.py", line 1157, in scrape_cron
+  File "/Users/i/repository/eri_marketing/client/Scraper/venv/lib/python3.10/site-packages/selenium/webdriver/remote/webelement.py", line 416, in find_element
+    return self._execute(Command.FIND_CHILD_ELEMENT, {"using": by, "value": value})["value"]
+  File "/Users/i/repository/eri_marketing/client/Scraper/venv/lib/python3.10/site-packages/selenium/webdriver/remote/webelement.py", line 394, in _execute
+    return self._parent.execute(command, params)
+  File "/Users/i/repository/eri_marketing/client/Scraper/venv/lib/python3.10/site-packages/selenium/webdriver/remote/webdriver.py", line 344, in execute
+    self.error_handler.check_response(response)
+  File "/Users/i/repository/eri_marketing/client/Scraper/venv/lib/python3.10/site-packages/selenium/webdriver/remote/errorhandler.py", line 229, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.NoSuchElementException: Message: no such element: Unable to locate element: {"method":"tag name","selector":"a"}
+  (Session info: chrome=116.0.5845.179); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+Stacktrace:
+0   chromedriver                        0x000000010e27f638 chromedriver + 5002808
+1   chromedriver                        0x000000010e276a53 chromedriver + 4966995
+2   chromedriver                        0x000000010de27a57 chromedriver + 449111
+3   chromedriver                        0x000000010de6dd05 chromedriver + 736517
+4   chromedriver                        0x000000010de6dec1 chromedriver + 736961
+5   chromedriver                        0x000000010de619f6 chromedriver + 686582
+6   chromedriver                        0x000000010de9441d chromedriver + 893981
+7   chromedriver                        0x000000010de618b8 chromedriver + 686264
+8   chromedriver                        0x000000010de945ae chromedriver + 894382
+9   chromedriver                        0x000000010deaf391 chromedriver + 1004433
+10  chromedriver                        0x000000010de941c3 chromedriver + 893379
+11  chromedriver                        0x000000010de5fdf9 chromedriver + 679417
+12  chromedriver                        0x000000010de60fde chromedriver + 683998
+13  chromedriver                        0x000000010e23c2d9 chromedriver + 4727513
+14  chromedriver                        0x000000010e2412de chromedriver + 4747998
+15  chromedriver                        0x000000010e1ff2c9 chromedriver + 4477641
+16  chromedriver                        0x000000010e24202d chromedriver + 4751405
+17  chromedriver                        0x000000010e2150ec chromedriver + 4567276
+18  chromedriver                        0x000000010e25f7f8 chromedriver + 4872184
+19  chromedriver                        0x000000010e25f9b7 chromedriver + 4872631
+20  chromedriver                        0x000000010e26fa1f chromedriver + 4938271
+21  libsystem_pthread.dylib             0x00007ff811f5c1d3 _pthread_start + 125
+22  libsystem_pthread.dylib             0x00007ff811f57bd3 thread_start + 15
+
+2023-09-12 11:31:31,278 INFO scrape_cron - Submitting 44 to threadpool
+2023-09-12 11:33:58,834 INFO scrape_cron - Anticaptcha response received
+2023-09-12 11:34:00,120 INFO scrape_cron - Processing Kings County Supreme Court
