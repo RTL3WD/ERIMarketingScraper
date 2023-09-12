@@ -1194,6 +1194,11 @@ def scrape_cron():
                 # check whether the process name matches
                 if proc.name() == PROCNAME:
                     proc.kill()
+            PROCNAME = "chrome" # or chromedriver or IEDriverServer
+            for proc in psutil.process_iter():
+                # check whether the process name matches
+                if proc.name() == PROCNAME:
+                    proc.kill()
         cron_job.status = "success"
         cron_job.log = 'run success'
         cron_job.save()
