@@ -1185,6 +1185,13 @@ def scrape_cron():
             logger.error(e, exc_info=True)
             print('error2'+str(e))
             pass
+        finally:
+            # driver.quit()
+            PROCNAME = "chromedriver" # or chromedriver or IEDriverServer
+            for proc in psutil.process_iter():
+                # check whether the process name matches
+                if proc.name() == PROCNAME:
+                    proc.kill()
         cron_job.status = "success"
         cron_job.log = 'run success'
         cron_job.save()
