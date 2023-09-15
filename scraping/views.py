@@ -978,7 +978,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                                 try:
                                     date = re.findall('[0-9]{2}/[0-9]{2}/[0-9]{4}',extracted_text)[0]
                                     print(extracted_text)
-                                    logger.info(extract_text)
+                                    logger.info(extracted_text)
                                     record['date'] = date
                                     cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
