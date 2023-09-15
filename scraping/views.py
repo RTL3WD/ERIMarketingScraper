@@ -1038,6 +1038,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
         logger.error(f'error in text: {e}', exc_info=True)
         print('error in text'+str(e))
         
+    record['business_address'] = business_address
     if(',' not in business_address and business_address != ''):
         record['business_address'] = business_address + (', ' + business_city if business_city else '') + (', ' + business_state if business_state else '') + ' '+ business_zip  
     
