@@ -149,9 +149,12 @@ def download_pdfs(link,records):
     docs_elements = elemntDriver.find_elements(By.CSS_SELECTOR, 'table.NewSearchResults > tbody > tr')
     docs = []
     for doc in docs_elements:
-        if 'processed' in doc.find_element(By.CSS_SELECTOR, 'td:nth-child(4)').get_attribute('innerHTML').strip().lower():
-            if len(doc.find_elements(By.CSS_SELECTOR, 'td:nth-child(2) > a'))>0:
-                docs.append(doc.find_element(By.CSS_SELECTOR, 'td:nth-child(2) > a'))
+        try:
+            if 'processed' in doc.find_element(By.CSS_SELECTOR, 'td:nth-child(4)').get_attribute('innerHTML').strip().lower():
+                if len(doc.find_elements(By.CSS_SELECTOR, 'td:nth-child(2) > a'))>0:
+                    docs.append(doc.find_element(By.CSS_SELECTOR, 'td:nth-child(2) > a'))
+        except Exception as e:
+            logger.error(e, exc_info=True)
     contentName= elemntDriver.find_element(By.CSS_SELECTOR, '#row').get_attribute('value').strip()
     hrefs = []
     
