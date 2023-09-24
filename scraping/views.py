@@ -8,6 +8,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import NoSuchElementException
 from python_anticaptcha import AnticaptchaClient, NoCaptchaTaskProxylessTask
 from selenium.webdriver.common.action_chains import ActionChains
 from datetime import datetime, timedelta
@@ -154,7 +155,7 @@ def download_pdfs(link,records):
                 if len(doc.find_elements(By.CSS_SELECTOR, 'td:nth-child(2) > a'))>0:
                     docs.append(doc.find_element(By.CSS_SELECTOR, 'td:nth-child(2) > a'))
         except Exception as e:
-            logger.error(e, exc_info=True)
+            logger.error(f'{e}: {doc.text}', exc_info=True)
     contentName= elemntDriver.find_element(By.CSS_SELECTOR, '#row').get_attribute('value').strip()
     hrefs = []
     
@@ -308,7 +309,7 @@ def extract_texts(folder,records):
                                                                     
                                                                     box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
                                                                     print(re.findall('[\s\S]*?Plaintiff' ,box_test))
-                                                                    logger.info(str(re.findall('[\s\S]*?Plaintiff' ,box_test)))
+                                                                    logger.info(f"Box Test: " + str(re.findall('[\s\S]*?Plaintiff' ,box_test)))
                                                                     if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0):
                                                                         creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
                                                                     cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
@@ -1116,25 +1117,36 @@ def scrape_cron():
                 driver.get('https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange')
                 sleep(5)
                 client = AnticaptchaClient(api_key)
-                site_key = driver.find_element(By.CSS_SELECTOR, 'div.g-recaptcha').get_attribute('data-sitekey')  # grab from site
-                task = NoCaptchaTaskProxylessTask(url, site_key)
-                job = client.createTask(task)
-                print("Waiting to solution by Anticaptcha workers")
-                job.join()
-                # Receive response
-                response = job.get_solution_response()
-                print("Received solution", response)
-                logger.info(f'Anticaptcha response received')
-                recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
-                driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
-                driver.execute_script("document.getElementById('captcha_form').submit();")
+                try:
+                    site_key = driver.find_element(By.CSS_SELECTOR, 'div.g-recaptcha').get_attribute('data-sitekey')  # grab from site
+                except NoSuchElementException as e:
+                    logger.info(f'Found no captcha element, skipping')
+                    site_key = None
+                
+                if site_key:
+                    task = NoCaptchaTaskProxylessTask(url, site_key)
+                    job = client.createTask(task)
+                    print("Waiting to solution by Anticaptcha workers")
+                    job.join()
+                    # Receive response
+                    response = job.get_solution_response()
+                    print("Received solution", response)
+                    logger.info(f'Anticaptcha response received')
+                    recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
+                    driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
+                    driver.execute_script("document.getElementById('captcha_form').submit();")
                 links = []
                 for count_type in count_types:
                     logger.info(f'Processing {count_type}')
                     try:
                         driver.get('https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange')
                         sleep(5)
-                        if(len(driver.find_elements(By.CSS_SELECTOR,'div.g-recaptcha'))>0):
+                        try:
+                            captcha = driver.find_elements(By.CSS_SELECTOR,'div.g-recaptcha')
+                        except NoSuchElementException as e:
+                            logger.info(f'Found no captcha element, skipping')
+                            captcha = []
+                        if(len(captcha)>0):
                             client = AnticaptchaClient(api_key)
                             site_key = driver.find_element(By.CSS_SELECTOR, 'div.g-recaptcha').get_attribute('data-sitekey')  # grab from site
                             task = NoCaptchaTaskProxylessTask(url, site_key)
@@ -1152,8 +1164,11 @@ def scrape_cron():
                         driver.find_element(By.XPATH,f'//*[@id="selCountyCourt"]/option[text()="{count_type}"]').click()
                         driver.find_element(By.CSS_SELECTOR,'#txtFilingDate').send_keys(Keys.BACKSPACE * 50)
                         driver.find_element(By.CSS_SELECTOR,'#txtFilingDate').send_keys(previous_date)
-                        driver.find_element(By.CSS_SELECTOR,'input[type*="submit"]').click()
+                        driver.find_element(By.XPATH,'//button[text()="Search"]').click()
                         sleep(7)
+
+                        solve_capcha(driver, client)
+                        
                         if len(driver.find_elements(By.XPATH,'//*[@id="selSortBy"]/option[text()="Case Type"]'))>0:
                             driver.find_element(By.XPATH,'//*[@id="selSortBy"]/option[text()="Case Type"]').click()
                             driver.find_element(By.CSS_SELECTOR,'caption input[type*="submit"]').click()
@@ -1214,3 +1229,23 @@ def scrape_cron():
         cron_job.log = str(e)
         cron_job.save()
         pass
+
+
+def solve_capcha(driver, client):
+    try:
+        site_key = driver.find_element(By.CSS_SELECTOR, 'div.g-recaptcha').get_attribute('data-sitekey')
+    except NoSuchElementException as e:
+        return
+    
+    task = NoCaptchaTaskProxylessTask(url, site_key)
+    job = client.createTask(task)
+    print("Waiting to solution by Anticaptcha workers")
+    logger.info(f'Found Captcha challenge, solving')
+    job.join()
+    # Receive response
+    response = job.get_solution_response()
+    print("Received solution", response)
+    logger.info(f'Anticaptcha response received')
+    recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
+    driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
+    driver.execute_script("document.getElementById('captcha_form').submit();")

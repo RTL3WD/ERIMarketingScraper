@@ -8,6 +8,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import NoSuchElementException
 from python_anticaptcha import AnticaptchaClient, NoCaptchaTaskProxylessTask
 from selenium.webdriver.common.action_chains import ActionChains
 from datetime import datetime, timedelta
@@ -27,7 +28,7 @@ import numpy as np
 import psutil
 import logging
 import concurrent.futures
-# from .models import Lead, CronJobs
+# from models import Lead, CronJobs
 from urllib.parse import unquote
 
 
@@ -140,16 +141,19 @@ def download_pdfs(link,records):
     optionsUC = webdriver.ChromeOptions()
     optionsUC.add_argument('--window-size=360,640')
     optionsUC.add_argument('--no-sandbox')
-    optionsUC.add_argument('--headless')
+    # optionsUC.add_argument('--headless')
     optionsUC.add_argument('start-maximized')
     elemntDriver = webdriver.Chrome(options=optionsUC)
     elemntDriver.get(link)
     docs_elements = elemntDriver.find_elements(By.CSS_SELECTOR, 'table.NewSearchResults > tbody > tr')
     docs = []
     for doc in docs_elements:
-        if 'processed' in doc.find_element(By.CSS_SELECTOR, 'td:nth-child(4)').get_attribute('innerHTML').strip().lower():
-            if len(doc.find_elements(By.CSS_SELECTOR, 'td:nth-child(2) > a'))>0:
-                docs.append(doc.find_element(By.CSS_SELECTOR, 'td:nth-child(2) > a'))
+        try:
+            if 'processed' in doc.find_element(By.CSS_SELECTOR, 'td:nth-child(4)').get_attribute('innerHTML').strip().lower():
+                if len(doc.find_elements(By.CSS_SELECTOR, 'td:nth-child(2) > a'))>0:
+                    docs.append(doc.find_element(By.CSS_SELECTOR, 'td:nth-child(2) > a'))
+        except Exception as e:
+            logger.error(f'{e}: {doc.text}', exc_info=True)
     contentName= elemntDriver.find_element(By.CSS_SELECTOR, '#row').get_attribute('value').strip()
     hrefs = []
     
@@ -173,7 +177,7 @@ def download_pdfs(link,records):
                     print(e)
                 sleep(5)
         elemntDriver.quit()
-        existing_lead = Lead.objects.filter(folder_id=f'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId={contentName.replace("-","/")}&display=all').first()
+        # existing_lead = Lead.objects.filter(folder_id=f'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId={contentName.replace("-","/")}&display=all').first()
         # if not existing_lead:
         extract_texts(contentName.replace("/","-"),records)
     else:
@@ -303,7 +307,7 @@ def extract_texts(folder,records):
                                                                     
                                                                     box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
                                                                     print(re.findall('[\s\S]*?Plaintiff' ,box_test))
-                                                                    logger.info(str(re.findall('[\s\S]*?Plaintiff' ,box_test)))
+                                                                    logger.info(f"Box Test: " + str(re.findall('[\s\S]*?Plaintiff' ,box_test)))
                                                                     if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0):
                                                                         creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
                                                                     cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
@@ -371,22 +375,22 @@ def extract_texts(folder,records):
             print(record['email'] if 'email' in record else None)
             msg = str(record['email']) if 'email' in record else None
             logger.info(msg)
-            existing_lead = Lead.objects.filter(folder_id=record['folder'] if 'folder' in record else '').first()
+            # existing_lead = Lead.objects.filter(folder_id=record['folder'] if 'folder' in record else '').first()
 
-            if existing_lead:
-                # Update the existing lead record
-                existing_lead.first_name = record['first_name'] if 'first_name' in record else ''
-                existing_lead.last_name = record['last_name'] if 'last_name' in record else ''
-                existing_lead.email = record['email'] if 'email' in record else ''
-                existing_lead.phone = record['tel'] if 'tel' in record else ''
-                existing_lead.creditor_name = record['creadetor_name'] if 'creadetor_name' in record else ''
-                existing_lead.company_suied = record['company_suid'] if 'company_suid' in record else ''
-                existing_lead.price = record['price'] if 'price' in record else ''
-                existing_lead.county = record['county'] if 'county' in record else ''
-                existing_lead.date = record['date'] if 'date' in record else ''
-                existing_lead.business_address = record['business_address'] if 'business_address' in record else ''
-                # ... Update other fields as needed ...
-                existing_lead.save()
+            # if existing_lead:
+            #     # Update the existing lead record
+            #     existing_lead.first_name = record['first_name'] if 'first_name' in record else ''
+            #     existing_lead.last_name = record['last_name'] if 'last_name' in record else ''
+            #     existing_lead.email = record['email'] if 'email' in record else ''
+            #     existing_lead.phone = record['tel'] if 'tel' in record else ''
+            #     existing_lead.creditor_name = record['creadetor_name'] if 'creadetor_name' in record else ''
+            #     existing_lead.company_suied = record['company_suid'] if 'company_suid' in record else ''
+            #     existing_lead.price = record['price'] if 'price' in record else ''
+            #     existing_lead.county = record['county'] if 'county' in record else ''
+            #     existing_lead.date = record['date'] if 'date' in record else ''
+            #     existing_lead.business_address = record['business_address'] if 'business_address' in record else ''
+            #     # ... Update other fields as needed ...
+            #     existing_lead.save()
                 # at.update('Scrape Leads',existing_lead.airtable_id, {
                 #     'Page Link': record['folder'] if 'folder' in record else None,
                 #     'First Name': record['first_name'] if 'first_name' in record else None,
@@ -400,35 +404,50 @@ def extract_texts(folder,records):
                 #     'COUNTY': record['county'] if 'county' in record else None,
                 #     'DATE': record['date'] if 'date' in record else None
                 # })
-            else:
-                id = at.create('Scrape Leads', {
-                    'Page Link': record['folder'] if 'folder' in record else None,
-                    'First Name': record['first_name'] if 'first_name' in record else None,
-                    'Last Name': record['last_name'] if 'last_name' in record else None,
-                    'phone': record['tel'] if 'tel' in record else None,
-                    'email': record['email'] if 'email' in record else None,
-                    'CREDITOR NAME': record['creadetor_name'] if 'creadetor_name' in record else None,
-                    'COMPANY SUED': record['company_suid'] if 'company_suid' in record else None,
-                    'BALANCE': record["price"] if 'price' in record else 0,
-                    'BUSINESS ADDRESS': record['business_address'] if 'business_address' in record else None,
-                    'COUNTY': record['county'] if 'county' in record else None,
-                    'DATE': record['date'] if 'date' in record else None
-                })
-                Lead.objects.create(
-                    first_name=record['first_name'] if 'first_name' in record else '',
-                    last_name=record['last_name'] if 'last_name' in record else '',
-                    email=record['email'] if 'email' in record else '',
-                    phone=record['tel'] if 'tel' in record else '',
-                    creditor_name=record['creadetor_name'] if 'creadetor_name' in record else '',
-                    company_suied=record['company_suid'] if 'company_suid' in record else '',
-                    price=record["price"] if 'price' in record else '',
-                    county=record["county"] if 'county' in record else '',
-                    date=record["date"] if 'date' in record else '',
-                    business_address=record["business_address"] if 'business_address' in record else '',
-                    folder_id=record['folder'] if 'folder' in record else '',
-                    status='done',
-                    airtable_id = id.get('id', None)
-                )
+            # else:
+            #     id = at.create('Scrape Leads', {
+            #         'Page Link': record['folder'] if 'folder' in record else None,
+            #         'First Name': record['first_name'] if 'first_name' in record else None,
+            #         'Last Name': record['last_name'] if 'last_name' in record else None,
+            #         'phone': record['tel'] if 'tel' in record else None,
+            #         'email': record['email'] if 'email' in record else None,
+            #         'CREDITOR NAME': record['creadetor_name'] if 'creadetor_name' in record else None,
+            #         'COMPANY SUED': record['company_suid'] if 'company_suid' in record else None,
+            #         'BALANCE': record["price"] if 'price' in record else 0,
+            #         'BUSINESS ADDRESS': record['business_address'] if 'business_address' in record else None,
+            #         'COUNTY': record['county'] if 'county' in record else None,
+            #         'DATE': record['date'] if 'date' in record else None
+            #     })
+            #     Lead.objects.create(
+            #         first_name=record['first_name'] if 'first_name' in record else '',
+            #         last_name=record['last_name'] if 'last_name' in record else '',
+            #         email=record['email'] if 'email' in record else '',
+            #         phone=record['tel'] if 'tel' in record else '',
+            #         creditor_name=record['creadetor_name'] if 'creadetor_name' in record else '',
+            #         company_suied=record['company_suid'] if 'company_suid' in record else '',
+            #         price=record["price"] if 'price' in record else '',
+            #         county=record["county"] if 'county' in record else '',
+            #         date=record["date"] if 'date' in record else '',
+            #         business_address=record["business_address"] if 'business_address' in record else '',
+            #         folder_id=record['folder'] if 'folder' in record else '',
+            #         status='done',
+            #         airtable_id = id.get('id', None)
+            #     )
+
+            lead = {
+                'Page Link': record['folder'] if 'folder' in record else None,
+                'First Name': record['first_name'] if 'first_name' in record else None,
+                'Last Name': record['last_name'] if 'last_name' in record else None,
+                'phone': record['tel'] if 'tel' in record else None,
+                'email': record['email'] if 'email' in record else None,
+                'CREDITOR NAME': record['creadetor_name'] if 'creadetor_name' in record else None,
+                'COMPANY SUED': record['company_suid'] if 'company_suid' in record else None,
+                'BALANCE': record["price"] if 'price' in record else 0,
+                'BUSINESS ADDRESS': record['business_address'] if 'business_address' in record else None,
+                'COUNTY': record['county'] if 'county' in record else None,
+                'DATE': record['date'] if 'date' in record else None
+            }
+            
             
             
             
@@ -1108,25 +1127,36 @@ def scrape_cron():
                 driver.get('https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange')
                 sleep(5)
                 client = AnticaptchaClient(api_key)
-                site_key = driver.find_element(By.CSS_SELECTOR, 'div.g-recaptcha').get_attribute('data-sitekey')  # grab from site
-                task = NoCaptchaTaskProxylessTask(url, site_key)
-                job = client.createTask(task)
-                print("Waiting to solution by Anticaptcha workers")
-                job.join()
-                # Receive response
-                response = job.get_solution_response()
-                print("Received solution", response)
-                logger.info(f'Anticaptcha response received')
-                recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
-                driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
-                driver.execute_script("document.getElementById('captcha_form').submit();")
+                try:
+                    site_key = driver.find_element(By.CSS_SELECTOR, 'div.g-recaptcha').get_attribute('data-sitekey')  # grab from site
+                except NoSuchElementException as e:
+                    logger.info(f'Found no captcha element, skipping')
+                    site_key = None
+                
+                if site_key:
+                    task = NoCaptchaTaskProxylessTask(url, site_key)
+                    job = client.createTask(task)
+                    print("Waiting to solution by Anticaptcha workers")
+                    job.join()
+                    # Receive response
+                    response = job.get_solution_response()
+                    print("Received solution", response)
+                    logger.info(f'Anticaptcha response received')
+                    recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
+                    driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
+                    driver.execute_script("document.getElementById('captcha_form').submit();")
                 links = []
                 for count_type in count_types:
                     logger.info(f'Processing {count_type}')
                     try:
                         driver.get('https://iapps.courts.state.ny.us/nyscef/CaseSearch?TAB=courtDateRange')
                         sleep(5)
-                        if(len(driver.find_elements(By.CSS_SELECTOR,'div.g-recaptcha'))>0):
+                        try:
+                            captcha = driver.find_elements(By.CSS_SELECTOR,'div.g-recaptcha')
+                        except NoSuchElementException as e:
+                            logger.info(f'Found no captcha element, skipping')
+                            captcha = []
+                        if(len(captcha)>0):
                             client = AnticaptchaClient(api_key)
                             site_key = driver.find_element(By.CSS_SELECTOR, 'div.g-recaptcha').get_attribute('data-sitekey')  # grab from site
                             task = NoCaptchaTaskProxylessTask(url, site_key)
@@ -1161,7 +1191,7 @@ def scrape_cron():
                         print(e)
                 
                 logger.info(f'Submitting {len(links)} to threadpool')
-                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                     futures = [executor.submit(download_pdfs, link, records) for link in links]
                     for future in futures:
                         result = future.result()
@@ -1194,4 +1224,7 @@ def scrape_cron():
         # cron_job.save()
         pass
 
+
+if __name__ == '__name__':
+    scrape_cron()
 scrape_cron()
