@@ -42,7 +42,7 @@ INSTALLED_APPS = [
 ]
 
 CRONJOBS = [
-    ('0 8/3 * * *', 'scraping.views.scrape_cron')
+    ('0 */3 * * *', 'scraping.views.scrape_cron')
 ]
 CRONTAB_LOG_FILE = '/home/ubuntu/Scraper/crontab.log'
 # LOGGING = {
