@@ -434,7 +434,7 @@ def extract_texts(folder,records):
             #         airtable_id = id.get('id', None)
             #     )
 
-            lead = {
+            lead = { # NOTE end result
                 'Page Link': record['folder'] if 'folder' in record else None,
                 'First Name': record['first_name'] if 'first_name' in record else None,
                 'Last Name': record['last_name'] if 'last_name' in record else None,
@@ -447,7 +447,7 @@ def extract_texts(folder,records):
                 'COUNTY': record['county'] if 'county' in record else None,
                 'DATE': record['date'] if 'date' in record else None
             }
-            
+
             
             
             
@@ -1055,7 +1055,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
         logger.error(f'error in text: {e}', exc_info=True)
         print('error in text'+str(e))
         
-    if(',' not in business_address and business_address != ''):
+    if('business_address' in record and len(re.findall('\n',record['business_address']))>0):
         record['business_address'] = business_address + (', ' + business_city if business_city else '') + (', ' + business_state if business_state else '') + ' '+ business_zip  
     
     print('========================================================================')
@@ -1082,7 +1082,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
         [email.append(word) if 'accounting' not in word and 'admin' not in word and 'customer' not in word else '' for word in page_text.split() if len(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net',word))>0]
         doc.close()
     except Exception as e:
-        logger.error(f'bemail pdf error: {e}', exc_info=True)
+        logger.error(f'email pdf error: {e}', exc_info=True)
         print('email pdf error'+str(e))
         
     print(email)
@@ -1116,7 +1116,7 @@ def scrape_cron():
         count_types = ['Kings County Supreme Court', 'Monroe County Supreme Court', 'Washington County Supreme Court', 'Ontario County Supreme Court']
         try:
             current_date = datetime.utcnow()
-            one_day = timedelta(days=1)
+            one_day = timedelta(days=3) # NOTE days back
             previous_date = (current_date - one_day).strftime('%m/%d/%Y')
             driver =  webdriver.Chrome(options=optionsUC)
             context = {'segment': 'index'}

@@ -1048,7 +1048,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
     
     print('========================================================================')
     print('========================================================================')
-    if(len(re.findall('\n',record['business_address']))>0):
+    if('business_address' in record and len(re.findall('\n',record['business_address']))>0):
         record['business_address'] = record['business_address'].split('\n')
         record['business_address'] = record['business_address'][1]
     logger.info(record['business_address'])
@@ -1070,7 +1070,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
         [email.append(word) if 'accounting' not in word and 'admin' not in word and 'customer' not in word else '' for word in page_text.split() if len(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net',word))>0]
         doc.close()
     except Exception as e:
-        logger.error(f'bemail pdf error: {e}', exc_info=True)
+        logger.error(f'email pdf error: {e}', exc_info=True)
         print('email pdf error'+str(e))
         
     print(email)
@@ -1103,7 +1103,7 @@ def scrape_cron():
         optionsUC.add_argument('start-maximized')
         count_types = ['Kings County Supreme Court', 'Monroe County Supreme Court', 'Washington County Supreme Court', 'Ontario County Supreme Court']
         try:
-            current_date = datetime.utcnow()
+            current_date = datetime.now()
             one_day = timedelta(days=1)
             previous_date = (current_date - one_day).strftime('%m/%d/%Y')
             print('Getting driver')
@@ -1163,17 +1163,21 @@ def scrape_cron():
                         WebDriverWait(driver, 600).until(EC.presence_of_element_located((By.XPATH,f'//*[@id="selCountyCourt"]/option[text()="{count_type}"]')))
                         driver.find_element(By.XPATH,f'//*[@id="selCountyCourt"]/option[text()="{count_type}"]').click()
                         driver.find_element(By.CSS_SELECTOR,'#txtFilingDate').send_keys(Keys.BACKSPACE * 50)
-                        driver.find_element(By.CSS_SELECTOR,'#txtFilingDate').send_keys(previous_date)
+                        driver.find_element(By.CSS_SELECTOR,'#txtFilingDate').send_keys(current_date)
                         driver.find_element(By.XPATH,'//button[text()="Search"]').click()
                         sleep(7)
 
                         solve_capcha(driver, client)
-                        
+
                         if len(driver.find_elements(By.XPATH,'//*[@id="selSortBy"]/option[text()="Case Type"]'))>0:
                             driver.find_element(By.XPATH,'//*[@id="selSortBy"]/option[text()="Case Type"]').click()
                             driver.find_element(By.CSS_SELECTOR,'caption input[type*="submit"]').click()
                             sleep(6)
                         elements = driver.find_elements(By.CSS_SELECTOR, '#form > table.NewSearchResults > tbody > tr')
+                        while not elements:
+                            elements = driver.find_elements(By.CSS_SELECTOR,
+                                                            '#form > table.NewSearchResults > tbody > tr')
+                            pass
                         for i,e in enumerate(elements):
                             if 'Commercial' in e.text:
                                 links.append(e.find_element(By.TAG_NAME,'a').get_attribute('href'))
@@ -1249,3 +1253,4 @@ def solve_capcha(driver, client):
     recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
     driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
     driver.execute_script("document.getElementById('captcha_form').submit();")
+
