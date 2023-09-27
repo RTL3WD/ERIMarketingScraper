@@ -1163,7 +1163,7 @@ def scrape_cron():
                         WebDriverWait(driver, 600).until(EC.presence_of_element_located((By.XPATH,f'//*[@id="selCountyCourt"]/option[text()="{count_type}"]')))
                         driver.find_element(By.XPATH,f'//*[@id="selCountyCourt"]/option[text()="{count_type}"]').click()
                         driver.find_element(By.CSS_SELECTOR,'#txtFilingDate').send_keys(Keys.BACKSPACE * 50)
-                        driver.find_element(By.CSS_SELECTOR,'#txtFilingDate').send_keys(current_date)
+                        driver.find_element(By.CSS_SELECTOR,'#txtFilingDate').send_keys(current_date.strftime('%m/%d/%Y'))
                         driver.find_element(By.XPATH,'//button[text()="Search"]').click()
                         sleep(7)
 
