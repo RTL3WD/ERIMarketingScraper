@@ -202,7 +202,7 @@ def extract_texts(folder,records):
                 try:
                     # use the poppler_path argument in case there is an exception in running convert_from_path
                     # images = convert_from_path(pdf_path)
-                    images = convert_from_path(pdf_path,poppler_path='/usr/local/Cellar/poppler/23.09.0/bin')
+                    images = convert_from_path(pdf_path)
                     for i, image in enumerate(images):
                         text = pytesseract.image_to_string(image, lang='eng')
                         # Loop through each line in the text
