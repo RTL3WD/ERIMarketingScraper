@@ -1138,10 +1138,11 @@ def scrape_cron():
                             driver.find_element(By.CSS_SELECTOR,'caption input[type*="submit"]').click()
                             sleep(6)
                         elements = driver.find_elements(By.CSS_SELECTOR, '#form > table.NewSearchResults > tbody > tr')
-                        while not elements:
+                        for _ in range(10):
                             elements = driver.find_elements(By.CSS_SELECTOR,
                                                             '#form > table.NewSearchResults > tbody > tr')
-                            pass
+                            if elements:
+                                break
                         for i,e in enumerate(elements):
                             if 'Commercial' in e.text:
                                 links.append(e.find_element(By.TAG_NAME,'a').get_attribute('href'))
