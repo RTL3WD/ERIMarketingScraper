@@ -1219,4 +1219,4 @@ def solve_capcha(driver, client):
     driver.execute_script("document.getElementById('captcha_form').submit();")
 
 
-scrape_cron()
+# scrape_cron()
