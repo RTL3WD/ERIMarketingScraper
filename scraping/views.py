@@ -248,85 +248,195 @@ def extract_texts(folder,records):
                     print(pdf_path)
                     if 'summons' in pdf_file.lower() or 'petition' in pdf_file.lower():
                         try:
-                            # Attempt to convert PDF to images using convert_from_path; specify poppler_path to avoid exceptions
-                            images = convert_from_path(pdf_path,
-                                                       first_page=0, last_page=2)
-                            # images = convert_from_path(pdf_path, poppler_path='/usr/local/Cellar/poppler/23.09.0/bin',
-                            #                            first_page=0, last_page=2)
-                            # Initialize the variables to hold defendant and plaintiff names
-                            defendant_name_1, defendant_name_2, plaintiff_name_1, plaintiff_name_2 = '', '', '', ''
-                            defendant_name = ''
-                            plaintiff_name = ''
-
-                            # Loop through each image in the images list
-                            # Enumerate is used to get the index 'i' along with the image.
+                            images = convert_from_path(pdf_path, first_page=0, last_page=2)
                             for i, image in enumerate(images):
-                                # Check if the index is 0 or 1, as we only want to process the first two pages.
-                                if i in [0, 1]:
-                                    # Extract text from the image using pytesseract with English language
-                                    text = pytesseract.image_to_string(image, lang='eng')
+                                if i == 0 or i == 1:
+                                    try:
+                                        custom_config = r'--oem 3 --psm 6'
+                                        #(left, upper, right, lower)
+                                        cropped_image = image.crop((1, 100, 1000, 1000))
+                                        text = pytesseract.image_to_string(cropped_image, lang='eng')
+                                        creadetor_name = ''
+                                        company_suid = ''
+                                        #(left, upper, right, lower)
+                                        cropped_image = image.crop((1, 150, 1500, 1000))
+                                        img_bytes = io.BytesIO()
+                                        cropped_image.save(img_bytes, format='JPEG')  # Save as JPEG (or other supported format)
+                                        img_bytes = img_bytes.getvalue()
+                                        
+                                        # # Decode the image bytes using OpenCV
+                                        img = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_GRAYSCALE)
+                                        kernel_size = 5
+                                        blur_gray = cv2.GaussianBlur(img,(kernel_size, kernel_size),0)
+                                        low_threshold = 50
+                                        high_threshold = 150
+                                        edges = cv2.Canny(blur_gray, low_threshold, high_threshold)
+                                        rho = 1  # distance resolution in pixels of the Hough grid
+                                        theta = np.pi / 180  # angular resolution in radians of the Hough grid
+                                        threshold = 15  # minimum number of votes (intersections in Hough grid cell)
+                                        min_line_length = 250  # minimum number of pixels making up a line
+                                        max_line_gap = 5  # maximum gap in pixels between connectable line segments
+                                        line_image = np.copy(img) * 0  # creating a blank to draw lines on
 
-                                    # Search for the first defendant name if it hasn't been found yet.
-                                    if not defendant_name_1:
-                                        # Define the pattern to find the first defendant name.
-                                        # It is using MULTILINE mode to match the start of a line.
-                                        defendant_pattern_1 = re.compile(r'^(.+),\s*\n?\n?Defendant', re.MULTILINE)
-                                        defendant_match_1 = defendant_pattern_1.search(
-                                            text)  # Perform the search to find the name
+                                        # Run Hough on edge detected image
+                                        # Output "lines" is an array containing endpoints of detected line segments
+                                        lines = []
+                                        lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
+                                                            min_line_length, max_line_gap)
+                                        image_height, image_width = img.shape[:2]
+                                        upper_x1 = 0
+                                        upper_y1 = 0
+                                        if np.any(lines):
+                                            for i,line in enumerate(lines):
+                                                x1, y1, x2, y2 = line[0]
+                                                slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
+                                                angle = np.arctan(slope) * 180 / np.pi
+                                                average_y = (y1 + y2) / 2
+                                                try:
+                                                    if abs(angle) < 10:
+                                                        if average_y < image_height / 2:
+                                                            for x1,y1,x2,y2 in line:
+                                                                upper_x1 = x1
+                                                                upper_y1 = y1 +70
+                                                except Exception as e:
+                                                    logger.error(f'Error passed: {e}', exc_info=True)
+                                                    pass
+                                                                
+                                            
+                                            for i,line in enumerate(lines):
+                                                x1, y1, x2, y2 = line[0]
+                                                slope = (y2 - y1) / (x2 - x1 + 1e-5)  # Calculate slope while avoiding division by zero
+                                                angle = np.arctan(slope) * 180 / np.pi
+                                                average_y = (y1 + y2) / 2
+                                                try:
+                                                    if abs(angle) < 10:
+                                                        if average_y < image_height / 2:
+                                                            for x1,y1,x2,y2 in line:
+                                                                if creadetor_name == '':
+                                                                    try:
+                                                                        text_region = img[y1:y2 + 400, x1:x2]
+                                                                    except:
+                                                                        try:
+                                                                            text_region = img[y1:y2 + 300, x1:x2]
+                                                                        except:
+                                                                            text_region = img[y1:y2 + 200, x1:x2]
+                                                                    
+                                                                    box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                    print(re.findall('[\s\S]*?Plaintiff' ,box_test))
+                                                                    logger.info(f"Box Test: " + str(re.findall('[\s\S]*?Plaintiff' ,box_test)))
+                                                                    if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0):
+                                                                        creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
+                                                                    cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+                                                                    # cv2.rectangle(img, (x1, y1), (x2, y2+400), (67, 255, 100), 2)
+                                                        else:
+                                                            for x1,y1,x2,y2 in line:
+                                                                try:
+                                                                    text_region = img[y1 - 500:y2 , x1:x2]
+                                                                except:
+                                                                    try:
+                                                                        text_region = img[y1 - 400:y2 , x1:x2]
+                                                                    except:
+                                                                        text_region = img[y1 - 300:y2 , x1:x2]
 
-                                        if defendant_match_1:  # If a match is found
-                                            # Extract and clean the defendant name from the text
-                                            defendant_name_1 = defendant_match_1.group(1).strip()
-                                            blocks = defendant_name_1.split('\n\n')
-                                            defendant_name_1 = blocks[-1]  # Keep the last block
-                                            defendant_name = defendant_name_1  # Assign to the final defendant_name variable
+                                                                box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
+                                                                if(len(re.findall('against-\\n.*?,|against-\\n\\n.*?,|against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test))>0):
+                                                                    company_suid = re.findall('against-\\n.*?,|against-\\n\\n.*?,|against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test)[0].replace('Defendants','').strip()
+                                                                    if(len(re.findall('against-\\n|against-\\n\\n' ,company_suid))>0):
+                                                                        company_suid = company_suid.replace(re.findall('against-\\n|against-\\n\\n' ,company_suid)[0], '').replace('-',company_suid,1)
+                                                                if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0 and creadetor_name == ''):
+                                                                        creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
 
-                                    # The process is similar for defendant_name_2, plaintiff_name_1, and plaintiff_name_2 with different patterns.
-                                    if not defendant_name_2:
-                                        defendant_pattern_2 = re.compile(r'([\s\S]+?)\n?\n?Defendant', re.MULTILINE)
-                                        defendant_match_2 = defendant_pattern_2.search(text)
+                                                                
+                                                                cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+                                                                cv2.rectangle(img, (upper_x1 if upper_x1 else x1, upper_y1 if upper_y1 else y1 - 500), (x2, y2), (67, 255, 100), 2)
+                                                    else:
+                                                        pass
+                                                except Exception as e:
+                                                    logger.error(f'creadetor_name2 error: {e}', exc_info=True)
+                                                    print('creadetor_name2 error'+str(e))
+                                            cv2.imwrite(folder_path+ "/" + folder + '/' + "text_under_line.jpg", img)
+                                        
+                                        if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text))>0) and company_suid == '':
+                                            company_suid = re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text)[0]
+                                            if(len(re.findall('-against-\\n|-against-\\n\\n' ,company_suid))>0):
+                                                company_suid = company_suid.replace(re.findall('-against-\\n|-against-\\n\\n' ,company_suid)[0], '')
 
-                                        if defendant_match_2:
-                                            defendant_name_2 = defendant_match_2.group(1).strip()
-                                            blocks = defendant_name_2.split('\n\n')
-                                            defendant_name_2 = blocks[-1]
-                                            if 'against' not in defendant_name_2:
-                                                defendant_name = defendant_name_2
+                                        if creadetor_name != '':
+                                            record['creadetor_name'] = creadetor_name.replace('Return To','').replace('Document Type: SUMMONS + COMPLAINT','')
+                                        if company_suid != '':
+                                            record['company_suid'] = company_suid
+                                        images = convert_from_path(pdf_path,
+                                                                first_page=0, last_page=2)
+                                        # images = convert_from_path(pdf_path, poppler_path='/usr/local/Cellar/poppler/23.09.0/bin',
+                                        #                            first_page=0, last_page=2)
+                                        # Initialize the variables to hold defendant and plaintiff names
+                                        defendant_name_1, defendant_name_2, plaintiff_name_1, plaintiff_name_2 = '', '', '', ''
+                                        defendant_name = ''
+                                        plaintiff_name = ''
+                                        text = pytesseract.image_to_string(image, lang='eng')
 
-                                    if not plaintiff_name_1:
-                                        plaintiff_pattern_1 = re.compile(r'^(.+),\s*\n?\n?Plaintiff,', re.MULTILINE)
-                                        plaintiff_match_1 = plaintiff_pattern_1.search(text)
+                                        # Search for the first defendant name if it hasn't been found yet.
+                                        if not defendant_name_1:
+                                            # Define the pattern to find the first defendant name.
+                                            # It is using MULTILINE mode to match the start of a line.
+                                            defendant_pattern_1 = re.compile(r'^(.+),\s*\n?\n?Defendant', re.MULTILINE)
+                                            defendant_match_1 = defendant_pattern_1.search(
+                                                text)  # Perform the search to find the name
 
-                                        if plaintiff_match_1:
-                                            plaintiff_name_1 = plaintiff_match_1.group(1).strip()
-                                            blocks = plaintiff_name_1.split('\n\n')
-                                            plaintiff_name_1 = blocks[-1]
-                                            plaintiff_name = plaintiff_name_1
+                                            if defendant_match_1:  # If a match is found
+                                                # Extract and clean the defendant name from the text
+                                                defendant_name_1 = defendant_match_1.group(1).strip()
+                                                blocks = defendant_name_1.split('\n\n')
+                                                defendant_name_1 = blocks[-1]  # Keep the last block
+                                                defendant_name = defendant_name_1  # Assign to the final defendant_name variable
 
-                                    if not plaintiff_name_2:
-                                        plaintiff_pattern_2 = re.compile(r'([\s\S]+?)\n?\n?Plaintiff,', re.MULTILINE)
-                                        plaintiff_match_2 = plaintiff_pattern_2.search(text)
+                                        # The process is similar for defendant_name_2, plaintiff_name_1, and plaintiff_name_2 with different patterns.
+                                        if not defendant_name_2:
+                                            defendant_pattern_2 = re.compile(r'([\s\S]+?)\n?\n?Defendant', re.MULTILINE)
+                                            defendant_match_2 = defendant_pattern_2.search(text)
 
-                                        if plaintiff_match_2:
-                                            plaintiff_name_2 = plaintiff_match_2.group(1).strip()
-                                            blocks = plaintiff_name_2.split('\n\n')
-                                            plaintiff_name_2 = blocks[-1]
-                                            plaintiff_name = plaintiff_name_2
-                            record['plaintiff'] = plaintiff_name
-                            record['defendant'] = defendant_name
-                            if defendant_name != '':
-                                record['first_name'] = defendant_name.split()[0]
-                            else:
-                                record['first_name'] = defendant_name
-                            if ' ' in defendant_name:
-                                record['last_name'] = ' '.join(defendant_name.split()[1:])
-                            else:
-                                record['last_name'] = ' '
-                        except Exception as e:  # Correct exception syntax
-                            # Log and print any errors during the process
-                            print(f'Summons extract error: {e}')
-                            logger.error(f'Summons extract error: {e}', exc_info=True)
+                                            if defendant_match_2:
+                                                defendant_name_2 = defendant_match_2.group(1).strip()
+                                                blocks = defendant_name_2.split('\n\n')
+                                                defendant_name_2 = blocks[-1]
+                                                if 'against' not in defendant_name_2:
+                                                    defendant_name = defendant_name_2
 
+                                        if not plaintiff_name_1:
+                                            plaintiff_pattern_1 = re.compile(r'^(.+),\s*\n?\n?Plaintiff,', re.MULTILINE)
+                                            plaintiff_match_1 = plaintiff_pattern_1.search(text)
+
+                                            if plaintiff_match_1:
+                                                plaintiff_name_1 = plaintiff_match_1.group(1).strip()
+                                                blocks = plaintiff_name_1.split('\n\n')
+                                                plaintiff_name_1 = blocks[-1]
+                                                plaintiff_name = plaintiff_name_1
+
+                                        if not plaintiff_name_2:
+                                            plaintiff_pattern_2 = re.compile(r'([\s\S]+?)\n?\n?Plaintiff,', re.MULTILINE)
+                                            plaintiff_match_2 = plaintiff_pattern_2.search(text)
+
+                                            if plaintiff_match_2:
+                                                plaintiff_name_2 = plaintiff_match_2.group(1).strip()
+                                                blocks = plaintiff_name_2.split('\n\n')
+                                                plaintiff_name_2 = blocks[-1]
+                                                plaintiff_name = plaintiff_name_2
+                                                
+                                        if defendant_name != '':
+                                            record['first_name'] = defendant_name.split()[0]
+                                        else:
+                                            record['first_name'] = defendant_name
+                                        if ' ' in defendant_name:
+                                            record['last_name'] = ' '.join(defendant_name.split()[1:])
+                                        else:
+                                            record['last_name'] = ' '
+                                    except Exception as e:  # Correct exception syntax
+                                        # Log and print any errors during the process
+                                        print(f'Summons extract error: {e}')
+                                        logger.error(f'Summons extract error: {e}', exc_info=True)
+                        except Exception as e:
+                            logger.error(f'credtor: {e}', exc_info=True)
+                            print('error credtor '+ str(e))
                     if 'exhibit' in pdf_file.lower() or 'statement of authorization' in pdf_file.lower():
                         exhibit_info(pdf_path,record,folder_path,folder,pdf_file.lower())
                                     
