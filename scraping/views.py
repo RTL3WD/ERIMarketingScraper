@@ -255,6 +255,8 @@ def extract_texts(folder,records):
                             #                            first_page=0, last_page=2)
                             # Initialize the variables to hold defendant and plaintiff names
                             defendant_name_1, defendant_name_2, plaintiff_name_1, plaintiff_name_2 = '', '', '', ''
+                            defendant_name = ''
+                            plaintiff_name = ''
 
                             # Loop through each image in the images list
                             # Enumerate is used to get the index 'i' along with the image.
@@ -312,6 +314,14 @@ def extract_texts(folder,records):
                                             plaintiff_name = plaintiff_name_2
                             record['plaintiff'] = plaintiff_name
                             record['defendant'] = defendant_name
+                            if defendant_name != '':
+                                record['first_name'] = defendant_name.split()[0]
+                            else:
+                                record['first_name'] = defendant_name
+                            if ' ' in defendant_name:
+                                record['last_name'] = ' '.join(defendant_name.split()[1:])
+                            else:
+                                record['last_name'] = ' '
                         except Exception as e:  # Correct exception syntax
                             # Log and print any errors during the process
                             print(f'Summons extract error: {e}')
@@ -1143,6 +1153,9 @@ def scrape_cron():
                                                             '#form > table.NewSearchResults > tbody > tr')
                             if elements:
                                 break
+                            else:
+                                logger.info(f'Not finding case type for {driver.current_url}')
+                                sleep(1)
                         for i,e in enumerate(elements):
                             if 'Commercial' in e.text:
                                 links.append(e.find_element(By.TAG_NAME,'a').get_attribute('href'))
