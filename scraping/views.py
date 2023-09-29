@@ -1187,7 +1187,7 @@ def scrape_cron():
         optionsUC.add_argument('--window-size=360,640')
         optionsUC.add_argument('--no-sandbox')
         # optionsUC.add_argument('--disable-dev-shm-usage')
-        optionsUC.add_argument('--headless')
+        # optionsUC.add_argument('--headless')
         optionsUC.add_argument('start-maximized')
         count_types = ['Kings County Supreme Court', 'Monroe County Supreme Court', 'Washington County Supreme Court', 'Ontario County Supreme Court']
         try:
@@ -1347,4 +1347,4 @@ def solve_capcha(driver, client):
     driver.execute_script("document.getElementById('captcha_form').submit();")
 
 
-# scrape_cron()
+scrape_cron()
