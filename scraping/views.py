@@ -748,7 +748,10 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                 if not matches_def:
                     regex = re.compile(pattern_def, re.DOTALL)
                     matches_def = regex.findall(' '.join(text.split('\n')))
-                    result['Defendant'] = matches_def[0].strip()
+                    try:
+                        record['Defendant'] = matches_def[0].strip()
+                    except IndexError:
+                        pass
                 try:
                     img = convertImg(image)
                     kernel_size = 5
