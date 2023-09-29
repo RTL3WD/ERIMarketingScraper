@@ -27,6 +27,7 @@ import io
 import numpy as np
 import psutil
 import logging
+import pytz
 import concurrent.futures
 from .models import Lead, CronJobs
 from urllib.parse import unquote
@@ -1190,7 +1191,7 @@ def scrape_cron():
         optionsUC.add_argument('start-maximized')
         count_types = ['Kings County Supreme Court', 'Monroe County Supreme Court', 'Washington County Supreme Court', 'Ontario County Supreme Court']
         try:
-            current_date = datetime.now()
+            current_date = datetime.now(tz=pytz.timezone('US/Eastern'))
             one_day = timedelta(days=1)
             previous_date = (current_date - one_day).strftime('%m/%d/%Y')
             print('Getting driver')
