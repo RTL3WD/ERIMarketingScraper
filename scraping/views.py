@@ -164,10 +164,7 @@ def download_pdfs(link,records):
         if 'summons' in doc.get_attribute('innerHTML').strip().lower() or 'petition' in doc.get_attribute('innerHTML').strip().lower() or 'exhibit' in doc.get_attribute('innerHTML').strip().lower() or 'statement of authorization' in doc.get_attribute('innerHTML').strip().lower() or 'complaint' in doc.get_attribute('innerHTML').strip().lower(): 
             hrefs.append({'href': doc.get_attribute('href'), 'name': doc.get_attribute('innerHTML').strip(),'contentName': contentName})
     
-    ActionChains(elemntDriver).key_down(Keys.CONTROL).send_keys("t").key_up(Keys.CONTROL).perform()
-    elemntDriver.execute_script('''window.open("http://bings.com","_blank");''')
     sleep(5)
-    elemntDriver.switch_to.window(elemntDriver.window_handles[1])
     if len(hrefs)>1:
         for href in hrefs:
             if 'summons' in href['name'].lower() or 'petition' in href['name'].lower() or 'exhibit' in href['name'].lower() or 'statement of authorization' in href['name'].lower() or 'complaint' in href['name'].lower(): 
@@ -1187,9 +1184,20 @@ def scrape_cron():
         optionsUC.add_argument('--window-size=360,640')
         optionsUC.add_argument('--no-sandbox')
         # optionsUC.add_argument('--disable-dev-shm-usage')
-        # optionsUC.add_argument('--headless')
+        optionsUC.add_argument('--headless')
         optionsUC.add_argument('start-maximized')
-        count_types = ['Kings County Supreme Court', 'Monroe County Supreme Court', 'Washington County Supreme Court', 'Ontario County Supreme Court']
+        count_types = [
+            'Kings County Supreme Court',
+            'Monroe County Supreme Court',
+            'Nassau County Supreme Court',
+            'Ontario County Supreme Court',
+            'Queens County Supreme Court',
+            'Warren County Supreme Court',
+            'Tompkins County Supreme Court',
+            'Washington County Supreme Court',
+            'New York County Supreme Court',
+            'Suffolk County Supreme Court'
+        ]
         try:
             current_date = datetime.now(tz=pytz.timezone('US/Eastern'))
             one_day = timedelta(days=1)
@@ -1347,4 +1355,4 @@ def solve_capcha(driver, client):
     driver.execute_script("document.getElementById('captcha_form').submit();")
 
 
-scrape_cron()
+# scrape_cron()
