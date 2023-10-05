@@ -244,8 +244,8 @@ def is_targeted_doc(doc_text: str) -> bool:
         return False
     return True
 
-
-def get_case_detail(driver): # -> dict[str, list[dict]]
+# def get_case_detail(driver) -> dict[str, list[dict]]:
+def get_case_detail(driver):
     '''Gets case detail from the document page
     
     Returns:
@@ -293,7 +293,8 @@ def get_case_detail(driver): # -> dict[str, list[dict]]
         'defendants': defendants
     }
 
-def parse_entities(party: list[dict]): # -> tuple[list, str]
+# def parse_entities(party: list[dict]) -> tuple[list, str]:
+def parse_entities(party):
     '''Parses out people and companies
     
     Parameters:
