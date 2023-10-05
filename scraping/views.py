@@ -139,53 +139,195 @@ def choose_location(image):
             print(myCoordinates)
             break         
 
-def download_pdfs(link,records):      
+def download_pdfs(link,records):
+
     optionsUC = webdriver.ChromeOptions()
-    optionsUC.add_argument('--window-size=360,640')
+    optionsUC.add_argument('--window-size=720,1280')
     optionsUC.add_argument('--no-sandbox')
     optionsUC.add_argument('--headless')
     optionsUC.add_argument('--disable-dev-shm-usage')
     optionsUC.add_argument('start-maximized')
     elemntDriver = webdriver.Chrome(options=optionsUC)
     elemntDriver.get(link)
-    docs_elements = elemntDriver.find_elements(By.CSS_SELECTOR, 'table.NewSearchResults > tbody > tr')
+
     docs = []
+
+    docs_elements = elemntDriver.find_elements(
+        By.CSS_SELECTOR, 'table.NewSearchResults > tbody > tr'
+    )
+
+    merchant_type = False
     for doc in docs_elements:
-        try:
-            if 'processed' in doc.find_element(By.CSS_SELECTOR, 'td:nth-child(4)').get_attribute('innerHTML').strip().lower():
-                if len(doc.find_elements(By.CSS_SELECTOR, 'td:nth-child(2) > a'))>0:
-                    docs.append(doc.find_element(By.CSS_SELECTOR, 'td:nth-child(2) > a'))
-        except Exception as e:
-            logger.error(f'{e}: {doc.text}', exc_info=True)
-    contentName= elemntDriver.find_element(By.CSS_SELECTOR, '#row').get_attribute('value').strip()
+        if 'processed' not in doc.text.lower():
+            continue
+        
+        if is_targeted_doc(doc.text.lower()):
+            merchant_type = True
+        
+        if len(doc.find_elements(By.CSS_SELECTOR, 'td:nth-child(2) > a'))>0:
+            docs.append({
+                'link': doc.find_element(
+                    By.CSS_SELECTOR, 'td:nth-child(2) > a'
+                )
+            })
+    
+    if not merchant_type:
+        elemntDriver.quit()
+        return
+
+    contentName = elemntDriver.find_element(
+        By.CSS_SELECTOR, '#row').get_attribute('value').strip()
     hrefs = []
     
     for doc in docs:
-        if 'summons' in doc.get_attribute('innerHTML').strip().lower() or 'petition' in doc.get_attribute('innerHTML').strip().lower() or 'exhibit' in doc.get_attribute('innerHTML').strip().lower() or 'statement of authorization' in doc.get_attribute('innerHTML').strip().lower() or 'complaint' in doc.get_attribute('innerHTML').strip().lower(): 
-            hrefs.append({'href': doc.get_attribute('href'), 'name': doc.get_attribute('innerHTML').strip(),'contentName': contentName})
+        hrefs.append({
+            'href': doc['link'].get_attribute('href'),
+            'name': doc['link'].get_attribute('innerHTML').strip(),
+            'contentName': contentName.replace("/","-")
+        })
     
-    sleep(5)
-    if len(hrefs)>1:
+    # NOTE: Isoloate business legal endings
+    parties = get_case_detail(elemntDriver)
+
+    count = 0
+    types = [
+        'summons',
+        'petition',
+        'exhibit',
+        'statement of authorization',
+        'complaint' 
+    ]
+
+    # need summons & exhibits
+    hrefs = [h
+        for h in hrefs 
+        if any(t in h['name'].lower() 
+        for t in types)
+    ]
+    if len(hrefs) > 1:
         for href in hrefs:
-            if 'summons' in href['name'].lower() or 'petition' in href['name'].lower() or 'exhibit' in href['name'].lower() or 'statement of authorization' in href['name'].lower() or 'complaint' in href['name'].lower(): 
-                try:
-                    elemntDriver.get(href['href'])
-                    download_file(href)
-                    sleep(5)
-                except Exception as e:
-                    logger.error(e, exc_info=True)
-                    print(e)
+            try:
+                elemntDriver.get(href['href'])
+                download_file(href)
+                count += 1
                 sleep(5)
-        elemntDriver.quit()
-        existing_lead = Lead.objects.filter(folder_id=f'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId={contentName.replace("-","/")}&display=all').first()
-        # if not existing_lead:
-        extract_texts(contentName.replace("/","-"),records)
-    else:
-        elemntDriver.quit()
-    sleep(3)          
+            except Exception as e:
+                logger.error(e, exc_info=True)
+                print(e)
+            sleep(5)
+        
+        logger.info(f'Found {count} cases with exhibit files')
+        if len(hrefs):
+            extract_texts(contentName.replace("/","-"), parties, records)
+
+    elemntDriver.quit()
+
+def is_targeted_doc(doc_text: str) -> bool:
+    '''Determines if the document matches necessary criteria'''
+    exhibit_types = [
+        'contract',
+        'copy of merchant agreement',
+        'revenue purchase agreement',
+        'contract agreement',
+        'contract redacted',
+        'redacted contract',
+        'frpa (future receivable purchase agreement)',
+        'agreement',
+        'merchant agreement',
+        'purchase of future receivables'
+    ]
+    form_conditions = ['exhibit']
+
+    if not all(substr in doc_text for substr in form_conditions):
+        return False
+    if any(substr in doc_text for substr in exhibit_types):
+        return False
+    return True
+
+def get_case_detail(driver) -> dict[str, list[dict]]:
+    '''Gets case detail from the document page
     
+    Returns:
+        A dictionary with values as lists of party data dicts
+    '''
+    tab_xpath = '//div[@id="tabs"]//ul//li[2]/a'
+    plaintiffs_table_xpath = '//div[@class="DataEntry_InnerBox"]//table[1]/tbody'
+    defendants_table_xpath = '//div[@class="DataEntry_InnerBox"]//table[2]/tbody'
+
+    detail_tab = driver.find_element(By.XPATH, tab_xpath)
+    detail_tab.click()
+    sleep(2)
+
+    logger.info('Gathering plaintiffs')
+    plaintiffs = []
+    try:
+        plaintiff_elems = driver.find_element(By.XPATH, plaintiffs_table_xpath)
+    except Exception as e:
+        plaintiff_elems = None
+        logger.error(e, exc_info=True)
+    if plaintiff_elems:
+        for tr in plaintiff_elems.find_elements(By.TAG_NAME, 'tr'):
+            columns = tr.find_elements(By.TAG_NAME, 'td')
+            name, consented_by = columns[0].text, columns[1].text
+            plaintiffs.append({'name': name, 'consented_by': consented_by})
+
+    logger.info('Gathering defendants')
+    defendants = []
+    try:
+        defendant_elems = driver.find_element(By.XPATH, defendants_table_xpath)
+    except Exception as e:
+        defendant_elems = None
+        logger.error(e, exc_info=True)
+    if defendant_elems:
+        for tr in defendant_elems.find_elements(By.TAG_NAME, 'tr'):
+            columns = tr.find_elements(By.TAG_NAME, 'td')
+            name, consented_by = columns[0].text, columns[1].text
+            defendants.append({'name': name, 'consented_by': consented_by})
+        
+    driver.back() # go back to links tab
+    sleep(3)
+
+    return {
+        'plaintiffs': plaintiffs,
+        'defendants': defendants
+    }
+
+def parse_entities(party: list[dict]) -> tuple[list, str]:
+    '''Parses out people and companies
     
-def extract_texts(folder,records):
+    Parameters:
+        party: List of dictionaries that contain 'name' and 'consented_by'
+
+    Returns:
+        A tuple of a list of people and a string of entities.
+    '''
+    people = []
+    entities = ''
+
+    for p in party:
+        if is_entity(p['name']):
+            entities += f"{p['name']}, "
+        else:
+            people.append(p['name'])
+    return people, entities.strip(', ')
+
+def is_entity(s: str) -> bool:
+    # Enhance the basic heuristics to elimiate substrings in a person's name
+    s = ' ' + s.replace('.', ' ') + ' '
+
+    legal_entities = [
+        " LLC ", " LLP ", " LP ", " Inc ", " Corp ", " Co ", " Ltd ", " PLLC ",
+        " PC ", " DBA ", " Corp ", " Corp ", " RLLP ", " L3C ", " P.A. ", 
+        " T/A ", " FZ-LLC "
+    ]
+
+    for entity in legal_entities:
+        if entity.lower() in s.lower():
+            return True
+    return False
+
+
+def extract_texts(folder, case_detail: dict, records):
     folder_path='pdfs'
     files = [file for file in os.listdir(folder_path + '/' + folder) if file.endswith(".pdf")]
     record = {}
@@ -254,8 +396,8 @@ def extract_texts(folder,records):
                                         #(left, upper, right, lower)
                                         cropped_image = image.crop((1, 100, 1000, 1000))
                                         text = pytesseract.image_to_string(cropped_image, lang='eng')
-                                        creadetor_name = ''
-                                        company_suid = ''
+                                        creditor_name = ''
+                                        company_sued = ''
                                         #(left, upper, right, lower)
                                         cropped_image = image.crop((1, 150, 1500, 1000))
                                         img_bytes = io.BytesIO()
@@ -310,7 +452,7 @@ def extract_texts(folder,records):
                                                     if abs(angle) < 10:
                                                         if average_y < image_height / 2:
                                                             for x1,y1,x2,y2 in line:
-                                                                if creadetor_name == '':
+                                                                if creditor_name == '':
                                                                     try:
                                                                         text_region = img[y1:y2 + 400, x1:x2]
                                                                     except:
@@ -323,7 +465,7 @@ def extract_texts(folder,records):
                                                                     print(re.findall('[\s\S]*?Plaintiff' ,box_test))
                                                                     logger.info(f"Box Test: " + str(re.findall('[\s\S]*?Plaintiff' ,box_test)))
                                                                     if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0):
-                                                                        creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
+                                                                        creditor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
                                                                     cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
                                                                     # cv2.rectangle(img, (x1, y1), (x2, y2+400), (67, 255, 100), 2)
                                                         else:
@@ -338,11 +480,11 @@ def extract_texts(folder,records):
 
                                                                 box_test = pytesseract.image_to_string(text_region, config=custom_config).strip()
                                                                 if(len(re.findall('against-\\n.*?,|against-\\n\\n.*?,|against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test))>0):
-                                                                    company_suid = re.findall('against-\\n.*?,|against-\\n\\n.*?,|against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test)[0].replace('Defendants','').strip()
-                                                                    if(len(re.findall('against-\\n|against-\\n\\n' ,company_suid))>0):
-                                                                        company_suid = company_suid.replace(re.findall('against-\\n|against-\\n\\n' ,company_suid)[0], '').replace('-',company_suid,1)
-                                                                if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0 and creadetor_name == ''):
-                                                                        creadetor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
+                                                                    company_sued = re.findall('against-\\n.*?,|against-\\n\\n.*?,|against-\\n\\n.*?;|-against-[\s\S]*Defendants' ,box_test)[0].replace('Defendants','').strip()
+                                                                    if(len(re.findall('against-\\n|against-\\n\\n' ,company_sued))>0):
+                                                                        company_sued = company_sued.replace(re.findall('against-\\n|against-\\n\\n' ,company_sued)[0], '').replace('-',company_sued,1)
+                                                                if(len(re.findall('[\s\S]*?Plaintiff' ,box_test))>0 and creditor_name == ''):
+                                                                        creditor_name = re.findall('[\s\S]*?Plaintiff' ,box_test)[0].replace('Plaintiff','').strip()
 
                                                                 
                                                                 cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
@@ -350,19 +492,19 @@ def extract_texts(folder,records):
                                                     else:
                                                         pass
                                                 except Exception as e:
-                                                    logger.error(f'creadetor_name2 error: {e}', exc_info=True)
-                                                    print('creadetor_name2 error'+str(e))
+                                                    logger.error(f'creditor_name2 error: {e}', exc_info=True)
+                                                    print('creditor_name2 error'+str(e))
                                             cv2.imwrite(folder_path+ "/" + folder + '/' + "text_under_line.jpg", img)
                                         
-                                        if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text))>0) and company_suid == '':
-                                            company_suid = re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text)[0]
-                                            if(len(re.findall('-against-\\n|-against-\\n\\n' ,company_suid))>0):
-                                                company_suid = company_suid.replace(re.findall('-against-\\n|-against-\\n\\n' ,company_suid)[0], '')
+                                        if(len(re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text))>0) and company_sued == '':
+                                            company_sued = re.findall('-against-\\n.*?,|-against-\\n\\n.*?,|-against-\\n\\n.*?;' ,text)[0]
+                                            if(len(re.findall('-against-\\n|-against-\\n\\n' ,company_sued))>0):
+                                                company_sued = company_sued.replace(re.findall('-against-\\n|-against-\\n\\n' ,company_sued)[0], '')
 
-                                        if creadetor_name != '':
-                                            record['creadetor_name'] = creadetor_name.replace('Return To','').replace('Document Type: SUMMONS + COMPLAINT','')
-                                        if company_suid != '':
-                                            record['company_suid'] = company_suid
+                                        if creditor_name != '':
+                                            record['creditor_name'] = creditor_name.replace('Return To','').replace('Document Type: SUMMONS + COMPLAINT','')
+                                        if company_sued != '':
+                                            record['company_sued'] = company_sued
                                         images = convert_from_path(pdf_path,
                                                                 first_page=0, last_page=2)
                                         # images = convert_from_path(pdf_path, poppler_path='/usr/local/Cellar/poppler/23.09.0/bin',
@@ -436,7 +578,7 @@ def extract_texts(folder,records):
                             logger.error(f'credtor: {e}', exc_info=True)
                             print('error credtor '+ str(e))
                     if 'exhibit' in pdf_file.lower() or 'statement of authorization' in pdf_file.lower():
-                        exhibit_info(pdf_path,record,folder_path,folder,pdf_file.lower())
+                        record = exhibit_info(pdf_path,record,folder_path,folder,pdf_file.lower())
                                     
                             
                     
@@ -448,68 +590,79 @@ def extract_texts(folder,records):
             print("="*100)
             logger.info(f'Record: {record}')
             records.append(record)
-            at = airtable.Airtable('appho2OWyOBvn6PPU', 'patwsQ3w8O4VGC05S.01759369d41db17822bcf0074f5daf046cc68ef136677dd68a15550f0e843bef')
-            print(record['email'] if 'email' in record else None)
-            msg = str(record['email']) if 'email' in record else None
-            logger.info(msg)
-            existing_lead = Lead.objects.filter(folder_id=record['folder'] if 'folder' in record else '').first()
 
-            if existing_lead:
-                # Update the existing lead record
-                existing_lead.first_name = record['first_name'] if 'first_name' in record else ''
-                existing_lead.last_name = record['last_name'] if 'last_name' in record else ''
-                existing_lead.email = record['email'] if 'email' in record else ''
-                existing_lead.phone = record['tel'] if 'tel' in record else ''
-                existing_lead.creditor_name = record['creadetor_name'] if 'creadetor_name' in record else ''
-                existing_lead.company_suied = record['company_suid'] if 'company_suid' in record else ''
-                existing_lead.price = record['price'] if 'price' in record else ''
-                existing_lead.county = record['county'] if 'county' in record else ''
-                existing_lead.date = record['date'] if 'date' in record else ''
-                existing_lead.business_address = record['business_address'] if 'business_address' in record else ''
-                # ... Update other fields as needed ...
-                existing_lead.save()
-                # at.update('Scrape Leads',existing_lead.airtable_id, {
-                #     'Page Link': record['folder'] if 'folder' in record else None,
-                #     'First Name': record['first_name'] if 'first_name' in record else None,
-                #     'Last Name': record['last_name'] if 'last_name' in record else None,
-                #     'phone': record['tel'] if 'tel' in record else None,
-                #     'email': record['email'] if 'email' in record else None,
-                #     'CREDITOR NAME': record['creadetor_name'] if 'creadetor_name' in record else None,
-                #     'COMPANY SUED': record['company_suid'] if 'company_suid' in record else None,
-                #     'BALANCE': record["price"] if 'price' in record else 0,
-                #     'BUSINESS ADDRESS': record['business_address'] if 'business_address' in record else None,
-                #     'COUNTY': record['county'] if 'county' in record else None,
-                #     'DATE': record['date'] if 'date' in record else None
-                # })
-            else:
-                id = at.create('Scrape Leads', {
+            at = airtable.Airtable('appho2OWyOBvn6PPU', 'patwsQ3w8O4VGC05S.01759369d41db17822bcf0074f5daf046cc68ef136677dd68a15550f0e843bef')
+            
+            plaintiffs = ', '.join([p['name'] for p in case_detail['plaintiffs']])
+            def_names, def_entities = parse_entities(case_detail['defendants'])
+            
+            record['creditor_name'] = plaintiffs
+            record['company_sued'] = def_entities
+
+            for defendant in def_names:
+                record['first_name'] = defendant.split()[0]
+                record['last_name'] = ' '.join(defendant.split()[1:])
+                lead = {
                     'Page Link': record['folder'] if 'folder' in record else None,
                     'First Name': record['first_name'] if 'first_name' in record else None,
                     'Last Name': record['last_name'] if 'last_name' in record else None,
                     'phone': record['tel'] if 'tel' in record else None,
                     'email': record['email'] if 'email' in record else None,
-                    'CREDITOR NAME': record['creadetor_name'] if 'creadetor_name' in record else None,
-                    'COMPANY SUED': record['company_suid'] if 'company_suid' in record else None,
+                    'CREDITOR NAME': record['creditor_name'] if 'creditor_name' in record else None,
+                    'COMPANY SUED': record['company_sued'] if 'company_sued' in record else None,
                     'BALANCE': record["price"] if 'price' in record else 0,
                     'BUSINESS ADDRESS': record['business_address'] if 'business_address' in record else None,
                     'COUNTY': record['county'] if 'county' in record else None,
                     'DATE': record['date'] if 'date' in record else None
-                })
-                Lead.objects.create(
-                    first_name=record['first_name'] if 'first_name' in record else '',
-                    last_name=record['last_name'] if 'last_name' in record else '',
-                    email=record['email'] if 'email' in record else '',
-                    phone=record['tel'] if 'tel' in record else '',
-                    creditor_name=record['creadetor_name'] if 'creadetor_name' in record else '',
-                    company_suied=record['company_suid'] if 'company_suid' in record else '',
-                    price=record["price"] if 'price' in record else '',
-                    county=record["county"] if 'county' in record else '',
-                    date=record["date"] if 'date' in record else '',
-                    business_address=record["business_address"] if 'business_address' in record else '',
-                    folder_id=record['folder'] if 'folder' in record else '',
-                    status='done',
-                    airtable_id = id.get('id', None)
-                )
+                }
+
+                logger.info(f'Record: {record}')
+                existing_lead = Lead.objects.filter(folder_id=record['folder'] if 'folder' in record else '').first()
+
+                if existing_lead:
+                    # Update the existing lead record
+                    existing_lead.first_name = record['first_name'] if 'first_name' in record else ''
+                    existing_lead.last_name = record['last_name'] if 'last_name' in record else ''
+                    existing_lead.email = record['email'] if 'email' in record else ''
+                    existing_lead.phone = record['tel'] if 'tel' in record else ''
+                    existing_lead.creditor_name = record['creditor_name'] if 'creditor_name' in record else ''
+                    existing_lead.company_suied = record['company_sued'] if 'company_sued' in record else ''
+                    existing_lead.price = record['price'] if 'price' in record else ''
+                    existing_lead.county = record['county'] if 'county' in record else ''
+                    existing_lead.date = record['date'] if 'date' in record else ''
+                    existing_lead.business_address = record['business_address'] if 'business_address' in record else ''
+                    # ... Update other fields as needed ...
+                    existing_lead.save()
+                    # at.update('Scrape Leads',existing_lead.airtable_id, {
+                    #     'Page Link': record['folder'] if 'folder' in record else None,
+                    #     'First Name': record['first_name'] if 'first_name' in record else None,
+                    #     'Last Name': record['last_name'] if 'last_name' in record else None,
+                    #     'phone': record['tel'] if 'tel' in record else None,
+                    #     'email': record['email'] if 'email' in record else None,
+                    #     'CREDITOR NAME': record['creditor_name'] if 'creditor_name' in record else None,
+                    #     'COMPANY SUED': record['company_sued'] if 'company_sued' in record else None,
+                    #     'BALANCE': record["price"] if 'price' in record else 0,
+                    #     'BUSINESS ADDRESS': record['business_address'] if 'business_address' in record else None,
+                    #     'COUNTY': record['county'] if 'county' in record else None,
+                    #     'DATE': record['date'] if 'date' in record else None
+                    # })
+                else:
+                    Lead.objects.create(
+                        first_name=record['first_name'] if 'first_name' in record else '',
+                        last_name=record['last_name'] if 'last_name' in record else '',
+                        email=record['email'] if 'email' in record else '',
+                        phone=record['tel'] if 'tel' in record else '',
+                        creditor_name=record['creditor_name'] if 'creditor_name' in record else '',
+                        company_suied=record['company_sued'] if 'company_sued' in record else '',
+                        price=record["price"] if 'price' in record else '',
+                        county=record["county"] if 'county' in record else '',
+                        date=record["date"] if 'date' in record else '',
+                        business_address=record["business_address"] if 'business_address' in record else '',
+                        folder_id=record['folder'] if 'folder' in record else '',
+                        status='done',
+                        airtable_id = id.get('id', None)
+                    )
+                at.create('Scrape Leads', lead)
             
             
             
@@ -546,9 +699,7 @@ def extract_folder(request, folder):
     context['records'] = leads
     html_template = loader.get_template('home/index.html')
     return HttpResponse(html_template.render(context, request))
-    
-        
-    
+
                          
 def scrape(request):
     print('starting scrape function')
@@ -711,16 +862,16 @@ def getBylocation(image):
 
     # Extract text within specific coordinate using pytesseract OCR Python
     # Providing cropped image as input to the OCR
-    creadetor_name = pytesseract.image_to_string(img_cropped, config=custom_config, lang='eng')
-    creadetor_name= creadetor_name.replace(',','')
+    creditor_name = pytesseract.image_to_string(img_cropped, config=custom_config, lang='eng')
+    creditor_name= creditor_name.replace(',','')
     font = cv2.FONT_HERSHEY_DUPLEX
     # Red color code
     red_color = (0,0,255)
 
-    cv2.putText(img, f'{creadetor_name}', (top_left_x-25, top_left_y - 10), font, 0.5, red_color, 1)
+    cv2.putText(img, f'{creditor_name}', (top_left_x-25, top_left_y - 10), font, 0.5, red_color, 1)
     # cv2.imshow('img', img)
     # cv2.waitKey(0)
-    return creadetor_name
+    return creditor_name
 
 
 def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
@@ -770,7 +921,7 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                             for x1,y1,x2,y2 in line:
                                 cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
                         except Exception as e:
-                            print('creadetor_name2 error'+str(e))
+                            print('creditor_name2 error'+str(e))
                     img = cv2.addWeighted(img, 1, line_image, 1, 0)
                     
                     # threshold the grayscale image
@@ -816,10 +967,11 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
                             
                             if len(re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]{1,4}',extracted_text)) > 0:
                                 try:
-                                    foundEmail = re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]{1,4}',extracted_text)[0]
-                                    if 'accounting'not in foundEmail and 'admin'not in foundEmail and 'customer'not in foundEmail:
-                                        email.append(foundEmail)
-                                        cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
+                                    foundEmail = re.findall('[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ com|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.net|[a-zA-Z0-9._%+ -]*@[a-zA-Z0-9.-]+ net|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9]{1,4}',extracted_text)
+                                    for email_addr in foundEmail:
+                                        if 'accounting'not in email_addr and 'admin'not in email_addr and 'customer'not in email_addr:
+                                            email.append(email_addr.strip())
+                                            cv2.rectangle(result, (x, y), (x+w, y+h), (0, 0, 255), 2)
                                 except Exception as e:
                                     logger.error(f'Email error: {e}', exc_info=True)
                                     print('email error'+str(e))
@@ -1161,10 +1313,10 @@ def exhibit_info(pdf_path, record, folder_path, folder,pdf_file):
     print(email)
     logger.info(email)
     
-    if 'email' not in record and len(email)>1:
-        record['email'] = email[len(email)-1].strip()
     if 'email' not in record and len(email)>0:
-        record['email'] = email[0].strip()
+        record['email'] = ', '.join(email)
+    else:
+        record['email'] = ''
         
         
         
