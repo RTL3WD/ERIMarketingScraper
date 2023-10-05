@@ -320,7 +320,7 @@ def is_entity(s: str) -> bool:
     legal_entities = [
         " LLC ", " LLP ", " LP ", " Inc ", " Corp ", " Co ", " Ltd ", " PLLC ",
         " PC ", " DBA ", " Corp ", " Corp ", " RLLP ", " L3C ", " P.A. ", 
-        " T/A ", " FZ-LLC "
+        " T/A ", " FZ-LLC ",  " Company "
     ]
 
     for entity in legal_entities:
