@@ -189,7 +189,6 @@ def download_pdfs(link,records):
     # NOTE: Isoloate business legal endings
     parties = get_case_detail(elemntDriver)
 
-    count = 0
     types = [
         'summons',
         'petition',
@@ -205,6 +204,8 @@ def download_pdfs(link,records):
         for t in types)
     ]
     if len(hrefs) > 1:
+        count = 0
+        failed = 0
         for href in hrefs:
             try:
                 elemntDriver.get(href['href'])
@@ -212,11 +213,16 @@ def download_pdfs(link,records):
                 count += 1
                 sleep(5)
             except Exception as e:
+                failed += 1
                 logger.error(e, exc_info=True)
                 print(e)
             sleep(5)
         
-        logger.info(f'Found {count} cases with exhibit files')
+        logger.info(
+            f'Found {len(hrefs)} cases with exhibit files, ' \
+            f'{count} successful downloads, '
+            f'{failed} download failures'
+        )
         if len(hrefs):
             extract_texts(contentName.replace("/","-"), parties, records)
 
@@ -336,6 +342,7 @@ def extract_texts(folder, case_detail: dict, records):
     
     record['folder'] = f'https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId={folder.replace("-","/")}&display=all'
     if folder != '':
+        logger.info(f'Processing {len(files)} PDFs in the {folder} folder')
         for pdf_file in files:
             if 'complaint' in pdf_file.lower():
                 pdf_path = os.path.join(folder_path + '/' + folder, pdf_file)
@@ -377,8 +384,8 @@ def extract_texts(folder, case_detail: dict, records):
                     logger.error(f'Complaint extract error: {e}', exc_info=True)
                     print('Complaint extract error'+str(e))
 
-        msg = str(record['price']) if 'price' in record else 'less'
-        print(record['price'] if 'price' in record else 'less')
+        msg = str(record['price']) if 'price' in record else 'Price not found'
+        print(msg)
         logger.info(msg)
         if 'price' in record and record['price'] >= 20000: 
             print(files)
@@ -587,9 +594,8 @@ def extract_texts(folder, case_detail: dict, records):
                 except Exception as e:
                     logger.error(e, exc_info=True)
                     print('error 1'+str(e))
-            print("="*100)
+            
             print(record)
-            print("="*100)
             logger.info(f'Record: {record}')
             records.append(record)
 
@@ -618,7 +624,7 @@ def extract_texts(folder, case_detail: dict, records):
                     'DATE': record['date'] if 'date' in record else None
                 }
 
-                logger.info(f'Record: {record}')
+                logger.info(f'Prepared record: {record}')
                 existing_lead = Lead.objects.filter(folder_id=record['folder'] if 'folder' in record else '').first()
 
                 if existing_lead:
@@ -1443,7 +1449,7 @@ def scrape_cron():
                 
                 driver.quit()
                 logger.info(f'Submitting {len(links)} to threadpool')
-                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
                     futures = [executor.submit(download_pdfs, link, records) for link in links]
                     for future in futures:
                         result = future.result()
@@ -1509,4 +1515,33 @@ def solve_capcha(driver, client):
     driver.execute_script("document.getElementById('captcha_form').submit();")
 
 
-# scrape_cron()
+if __name__ == '__main__':
+    links = [
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=c32rzkZilC6j3hz1MvvIig==&display=all&courtType=Monroe%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=OjByZpIC50x8saqLb6hUrA==&display=all&courtType=Monroe%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=838RVb88a6vo9PHi0rsx/w==&display=all&courtType=Monroe%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=DLaFsUW4LRuGPzXTfHrMow==&display=all&courtType=Monroe%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=My9JygLcQzK2Ueemj/GpyA==&display=all&courtType=Monroe%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=dNqLy0GXkLof/7OBtMyhCw==&display=all&courtType=Monroe%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=ZgIKrM9KXyjq2LF8XyLlFQ==&display=all&courtType=Monroe%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=cJyFPe2QaixGcCd_PLUS_acicrA==&display=all&courtType=Monroe%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=G6dUbYngsprd5YBIo8bfyQ==&display=all&courtType=Nassau%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=olEa8WEDPTOWEKG1VFi/rQ==&display=all&courtType=Nassau%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=i/vzbvh47ht/5dksAOgckg==&display=all&courtType=Queens%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=ZSHNo_PLUS_5hO48El9HJw6A62Q==&display=all&courtType=Warren%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=QciIkT8iUjf4W8s4712wUg==&display=all&courtType=New%20York%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=TRAVQUD71lWDYV5gb443Qg==&display=all&courtType=New%20York%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=Dro4FcIWLHjVDqabG/4BPw==&display=all&courtType=New%20York%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=KCCsS2Zk6KCBn2UegggivA==&display=all&courtType=New%20York%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=ywZpn6YYRXtfhy1jvsoBoA==&display=all&courtType=New%20York%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=nOmkO3Wm/Q4TPvW_PLUS_RdDc/w==&display=all&courtType=New%20York%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=Vl5W1AExKFEeIq1HzEE3FA==&display=all&courtType=New%20York%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=yEHc_PLUS_JXh14GVRRjILvO50w==&display=all&courtType=New%20York%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=a2KHQV7DPoaHcTYsVLkLcg==&display=all&courtType=New%20York%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=qcMYVSYHwPSM5ZjaHHfGtA==&display=all&courtType=New%20York%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=2BYj326wiY5UFZlQIZTXcw==&display=all&courtType=New%20York%20County%20Supreme%20Court&resultsPageNum=1",
+    "https://iapps.courts.state.ny.us/nyscef/DocumentList?docketId=h7JIsilomTOho/1WQt8qnQ==&display=all&courtType=New%20York%20County%20Supreme%20Court&resultsPageNum=1"
+    ]
+    for link in links:
+        download_pdfs(link, [])
+    # scrape_cron()
