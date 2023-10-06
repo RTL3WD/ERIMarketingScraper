@@ -1449,7 +1449,7 @@ def scrape_cron():
                 
                 driver.quit()
                 logger.info(f'Submitting {len(links)} to threadpool')
-                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                     futures = [executor.submit(download_pdfs, link, records) for link in links]
                     for future in futures:
                         result = future.result()
