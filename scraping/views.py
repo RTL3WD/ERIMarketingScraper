@@ -326,7 +326,7 @@ def is_entity(s: str) -> bool:
     legal_entities = [
         " LLC ", " LLP ", " LP ", " Inc ", " Corp ", " Co ", " Ltd ", " PLLC ",
         " PC ", " DBA ", " Corp ", " Corp ", " RLLP ", " L3C ", " P.A. ", 
-        " T/A ", " FZ-LLC ",  " Company "
+        " T/A ", " FZ-LLC ",  " Company ", " Board "
     ]
 
     for entity in legal_entities:
@@ -1386,7 +1386,7 @@ def scrape_cron():
                     job.join()
                     # Receive response
                     response = job.get_solution_response()
-                    print("Received solution", response)
+                    print("Received solution")
                     logger.info(f'Anticaptcha response received')
                     recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                     driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
@@ -1411,7 +1411,7 @@ def scrape_cron():
                             job.join()
                             # Receive response
                             response = job.get_solution_response()
-                            print("Received solution", response)
+                            print("Received solution")
                             logger.info(f'Anticaptcha response received')
                             recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
                             driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
@@ -1508,7 +1508,7 @@ def solve_capcha(driver, client):
     job.join()
     # Receive response
     response = job.get_solution_response()
-    print("Received solution", response)
+    print("Received solution")
     logger.info(f'Anticaptcha response received')
     recaptcha_textarea = driver.find_element(By.ID, "g-recaptcha-response")
     driver.execute_script(f"arguments[0].innerHTML = '{response}';", recaptcha_textarea)
