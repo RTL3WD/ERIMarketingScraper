@@ -255,7 +255,7 @@ def is_targeted_doc(doc_text: str) -> bool:
     return True
 
 
-def get_case_detail(driver) -> dict[str, list[dict]]:
+def get_case_detail(driver):
     '''Gets case detail from the document page
     
     Returns:
@@ -303,7 +303,7 @@ def get_case_detail(driver) -> dict[str, list[dict]]:
         'defendants': defendants
     }
 
-def parse_entities(party: list[dict]) -> tuple[list, str]:
+def parse_entities(party):
     '''Parses out people and companies
     
     Parameters:
@@ -323,7 +323,7 @@ def parse_entities(party: list[dict]) -> tuple[list, str]:
     return people, entities.strip(', ')
 
 
-def is_entity(s: str) -> bool:
+def is_entity(s):
     # Enhance the basic heuristics to elimiate substrings in a person's name
     s = ' ' + s.replace('.', ' ') + ' '
 
