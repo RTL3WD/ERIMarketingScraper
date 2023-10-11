@@ -227,10 +227,32 @@ def download_pdfs(link,records):
         
         logger.info(f'Found {count} cases with exhibit files')
         if len(hrefs):
-            extract_texts(contentName.replace("/","-"), parties, records)
+            folder = contentName.replace("/","-")
+            extract_texts(folder, parties, records)
     print('Too few docs found')
     elemntDriver.quit()
 
+
+def folder_exists(folder: str) -> bool:
+    '''
+    Check if folder exists to avoid duplicates
+    
+    Returns True if the record already exists. If the record doesn't exist, 
+    appends to case record and returns False.
+    '''
+    case_record_path = './cases.json'
+    if os.path.exists(case_record_path):
+        with open(case_record_path, 'r') as f:
+            case_records = json.loads(f.read())
+    else:
+        case_records = []
+
+    if folder in case_records:
+        return True
+    
+    with open(case_record_path, 'w') as outfile:
+        outfile.write(json.dumps(case_records.append(folder)))
+    return False
 
 def is_targeted_doc(doc_text: str) -> bool:
     '''Determines if the document matches necessary criteria'''
@@ -611,6 +633,10 @@ def extract_texts(folder, case_detail: dict, records):
             
             record['creditor_name'] = plaintiffs
             record['company_sued'] = def_entities
+
+            if not folder_exists(folder):
+                logger.debug(f'Folder {folder} exists, skipping insert')
+                print(f'Folder {folder} exists, skipping insert')
 
             for defendant in def_names:
                 record['first_name'] = defendant.split()[0]
