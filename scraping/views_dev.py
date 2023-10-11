@@ -228,7 +228,11 @@ def download_pdfs(link,records):
         logger.info(f'Found {count} cases with exhibit files')
         if len(hrefs):
             folder = contentName.replace("/","-")
-            extract_texts(folder, parties, records)
+            if folder_exists(folder):
+                logger.debug(f'Folder {folder} exists, skipping insert')
+                print(f'Folder {folder} exists, skipping insert')
+            else:
+                extract_texts(folder, parties, records)
     print('Too few docs found')
     elemntDriver.quit()
 
@@ -639,10 +643,10 @@ def extract_texts(folder, case_detail: dict, records):
             record['creditor_name'] = plaintiffs
             record['company_sued'] = def_entities
 
-            if folder_exists(folder):
-                logger.debug(f'Folder {folder} exists, skipping insert')
-                print(f'Folder {folder} exists, skipping insert')
-                return
+            # if folder_exists(folder):
+            #     logger.debug(f'Folder {folder} exists, skipping insert')
+            #     print(f'Folder {folder} exists, skipping insert')
+            #     return
 
             for defendant in def_names:
                 record['first_name'] = defendant.split()[0]
