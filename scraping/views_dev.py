@@ -240,6 +240,9 @@ def folder_exists(folder: str) -> bool:
     Returns True if the record already exists. If the record doesn't exist, 
     appends to case record and returns False.
     '''
+    if not isinstance(folder, str):
+        print(f'Cannot parse {folder}')
+        return False
     case_record_path = './cases.json'
     if os.path.exists(case_record_path):
         with open(case_record_path, 'r') as f:
@@ -250,8 +253,10 @@ def folder_exists(folder: str) -> bool:
     if folder in case_records:
         return True
     
+    case_records.append(folder)
+    logger.info(f'Saving {folder} to case records')
     with open(case_record_path, 'w') as outfile:
-        outfile.write(json.dumps(case_records.append(folder)))
+        outfile.write(json.dumps(case_records))
     return False
 
 def is_targeted_doc(doc_text: str) -> bool:
