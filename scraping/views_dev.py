@@ -639,9 +639,10 @@ def extract_texts(folder, case_detail: dict, records):
             record['creditor_name'] = plaintiffs
             record['company_sued'] = def_entities
 
-            if not folder_exists(folder):
+            if folder_exists(folder):
                 logger.debug(f'Folder {folder} exists, skipping insert')
                 print(f'Folder {folder} exists, skipping insert')
+                return
 
             for defendant in def_names:
                 record['first_name'] = defendant.split()[0]
