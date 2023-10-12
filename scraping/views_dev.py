@@ -247,7 +247,9 @@ def folder_exists(folder: str) -> bool:
     if not isinstance(folder, str):
         print(f'Cannot parse {folder}')
         return False
-    case_record_path = './cases.json'
+    
+    case_record_path = os.path.join(os.path.abspath(__file__), 'cases.json')
+
     if os.path.exists(case_record_path):
         with open(case_record_path, 'r') as f:
             case_records = json.loads(f.read())
