@@ -248,7 +248,8 @@ def folder_exists(folder: str) -> bool:
         print(f'Cannot parse {folder}')
         return False
     
-    case_record_path = os.path.join(os.path.abspath(__file__), 'cases.json')
+    cur_dur, _ = os.path.split(os.path.abspath(__file__))
+    case_record_path = os.path.join(cur_dur, 'cases.json')
 
     if os.path.exists(case_record_path):
         with open(case_record_path, 'r') as f:
