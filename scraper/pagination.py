@@ -2,8 +2,8 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from extract_court_results import extract_table_data
-from select_court import select_court_try_except as select_court
+from .extract_court_results import extract_table_data
+from .select_court import select_court_try_except as select_court
 from selenium.common.exceptions import StaleElementReferenceException
 
 # Define a function to find and click the next page link

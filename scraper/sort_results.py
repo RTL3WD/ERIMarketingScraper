@@ -1,8 +1,8 @@
 # Import necessary libraries
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
-from random_delay import random_delay
-from recaptcha_solve import solve_recaptcha
+from .random_delay import random_delay
+from .recaptcha_solve import solve_recaptcha
 
 
 def sort_results(driver, anticaptcha_key):
