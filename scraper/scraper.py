@@ -50,7 +50,7 @@ def scraper():
     court_index = 1
 
     # Select a court using a custom function and anticaptcha_key
-    court_index, _ = select_court(driver, anticaptcha_key, court_index, None)
+    court_index, _ = select_court(driver, court_index, None)
     random_delay(3, 5)
 
     # Check if the results page is displayed and sort results
@@ -75,7 +75,7 @@ def scraper():
             try:
                 # Select a court, introduce a random delay, and sort results
                 court_index, existing_df = select_court(
-                    driver, anticaptcha_key, court_index, existing_df)
+                    driver, court_index, existing_df)
             except:
                 print('Closing Scraper')
                 exit_scraper(driver, existing_df)

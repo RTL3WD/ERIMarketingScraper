@@ -24,7 +24,7 @@ def send_to_airtable(json_data):
                 "fields": {
                     # "Name": json_data,
                     "DATE": date,
-                    # "Page Link": json_data,
+                    "Page Link": json_data['Link'],
                     # "Status": json_data,
                     "phone": json_data['Phone Number'],
                     "email": json_data['Email'],
